@@ -1,0 +1,127 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "智能食谱",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/recipe/list",
+      "style": {
+        "navigationBarTitleText": "食谱列表",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/recipe/detail",
+      "style": {
+        "navigationBarTitleText": "食谱详情"
+      }
+    },
+    {
+      "path": "pages/recipe/create",
+      "style": {
+        "navigationBarTitleText": "创建食谱"
+      }
+    },
+    {
+      "path": "pages/recipe/edit",
+      "style": {
+        "navigationBarTitleText": "编辑食谱"
+      }
+    },
+    {
+      "path": "pages/recipe/search",
+      "style": {
+        "navigationBarTitleText": "搜索食谱"
+      }
+    },
+    {
+      "path": "pages/community/feed",
+      "style": {
+        "navigationBarTitleText": "美食社区",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/community/publish",
+      "style": {
+        "navigationBarTitleText": "发布动态"
+      }
+    },
+    {
+      "path": "pages/community/detail",
+      "style": {
+        "navigationBarTitleText": "动态详情"
+      }
+    },
+    {
+      "path": "pages/shopping/list",
+      "style": {
+        "navigationBarTitleText": "购物清单"
+      }
+    },
+    {
+      "path": "pages/user/login",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/user/register",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+    {
+      "path": "pages/user/profile",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "pages/user/my-recipes",
+      "style": {
+        "navigationBarTitleText": "我的食谱"
+      }
+    },
+    {
+      "path": "pages/user/favorites",
+      "style": {
+        "navigationBarTitleText": "我的收藏"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/community/feed",
+        "text": "社区"
+      },
+      {
+        "pagePath": "pages/shopping/list",
+        "text": "清单"
+      },
+      {
+        "pagePath": "pages/user/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "智能食谱",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  }
+}
