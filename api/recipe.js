@@ -121,13 +121,17 @@ export const getFavorites = () => {
 /**
  * 搜索食谱
  * @param {Object} params - 搜索参数
- * @param {String} params.search - 搜索关键词
+ * @param {String} params.keyword - 搜索关键词
+ * @param {Number} params.page - 页码
  */
 export const searchRecipes = (params) => {
   return request({
     url: '/recipe/',
     method: 'GET',
-    params,
+    params: {
+      search: params.keyword,
+      page: params.page
+    },
     needAuth: false
   })
 }

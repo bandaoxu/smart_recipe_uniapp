@@ -42,11 +42,8 @@ export default {
  * 全局样式
  */
 
-/* 引入 uni-ui 样式 */
-@import '@/uni_modules/uni-ui/index.scss';
-
 /* 全局变量 */
-$primary-color: #3cc51f;
+$primary-color: #667eea;
 $text-color: #333333;
 $text-color-light: #666666;
 $border-color: #e5e5e5;

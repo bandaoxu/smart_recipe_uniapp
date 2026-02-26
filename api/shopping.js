@@ -25,7 +25,7 @@ export const getShoppingList = () => {
  * @param {Number} data.quantity - 数量
  * @param {String} data.unit - 单位
  */
-export const addItem = (data) => {
+export const addShoppingItem = (data) => {
   return request({
     url: '/shopping-list/',
     method: 'POST',
@@ -39,7 +39,7 @@ export const addItem = (data) => {
  * @param {Object} data - 更新数据
  * @param {Boolean} data.is_purchased - 是否已购买
  */
-export const updateItem = (id, data) => {
+export const updateShoppingItem = (id, data) => {
   return request({
     url: `/shopping-list/${id}/`,
     method: 'PUT',
@@ -51,7 +51,7 @@ export const updateItem = (id, data) => {
  * 删除购物清单项
  * @param {Number} id - 清单项 ID
  */
-export const deleteItem = (id) => {
+export const deleteShoppingItem = (id) => {
   return request({
     url: `/shopping-list/${id}/`,
     method: 'DELETE'
