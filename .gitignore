@@ -1,0 +1,75 @@
+# UniApp / Vue 项目
+
+# 依赖目录
+node_modules/
+.venv/
+.pnpm-store/
+
+# 构建产物
+dist/
+unpackage/
+.temp/
+.cache/
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 编辑器和 IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 临时文件
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+
+# HBuilderX 相关
+.hbuilderx/
+unpackage/
+
+# 微信小程序
+.wxss.map
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 其他
+*.swp
+*~
+.project
+.settings/
+.classpath
+.factorypath
+
+# 用户上传的文件（如果有本地测试）
+uploads/
+static/uploads/
+
+# 锁文件（根据团队协作需求决定是否忽略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
