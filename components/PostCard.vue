@@ -2,7 +2,7 @@
   <view class="post-card" @click="goToDetail">
     <!-- 用户信息 -->
     <view class="post-header">
-      <image class="avatar" :src="post.user?.avatar || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+      <image class="avatar" :src="post.user?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
       <view class="user-info">
         <text class="username">{{ post.user?.nickname || '匿名' }}</text>
         <text class="time">{{ formatRelativeTime(post.created_at) }}</text>

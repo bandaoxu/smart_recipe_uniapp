@@ -5,7 +5,7 @@
       <view class="post-content">
         <!-- 作者信息 -->
         <view class="author-info">
-          <image :src="post.author?.avatar || '/static/images/default-avatar.png'" mode="aspectFill" class="author-avatar"></image>
+          <image :src="post.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" class="author-avatar"></image>
           <view class="author-detail">
             <text class="author-name">{{ post.author?.nickname }}</text>
             <text class="post-time">{{ formatTime(post.created_at) }}</text>
@@ -195,11 +195,9 @@ export default {
      */
     async handleLike() {
       try {
-        await likePost(this.postId)
-
-        this.post.is_liked = !this.post.is_liked
-        this.post.likes += this.post.is_liked ? 1 : -1
-
+        const res = await likePost(this.postId)
+        this.post.is_liked = res.data.is_liked
+        this.post.likes = res.data.likes
       } catch (error) {
         console.error('点赞失败:', error)
         uni.showToast({

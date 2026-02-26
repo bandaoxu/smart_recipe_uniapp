@@ -23,7 +23,7 @@
       </view>
 
       <view class="author-info">
-        <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+        <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
         <text class="author-name">{{ recipe.author?.nickname || '匿名' }}</text>
       </view>
 

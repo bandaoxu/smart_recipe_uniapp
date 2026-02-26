@@ -3,7 +3,7 @@
     <!-- 评论列表 -->
     <view class="comment-item" v-for="comment in comments" :key="comment.id">
       <!-- 用户头像 -->
-      <image class="avatar" :src="comment.user?.avatar || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+      <image class="avatar" :src="comment.user?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
 
       <!-- 评论内容 -->
       <view class="comment-content">

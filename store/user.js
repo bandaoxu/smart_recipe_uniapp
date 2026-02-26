@@ -30,7 +30,7 @@ export const useUserStore = defineStore('user', {
     /**
      * 获取用户头像
      */
-    avatar: (state) => state.userInfo?.avatar || '/static/images/default-avatar.png',
+    avatar: (state) => state.userInfo?.avatar || '/static/images/default-avatar.svg',
 
     /**
      * 获取用户 ID

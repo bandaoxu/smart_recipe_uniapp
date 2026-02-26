@@ -2,7 +2,7 @@
   <view class="profile-container">
     <!-- 用户信息卡片 -->
     <view class="user-card">
-      <image class="avatar" :src="userInfo.avatar || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+      <image class="avatar" :src="userInfo.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
       <view class="user-info">
         <text class="nickname">{{ userInfo.nickname || '未设置昵称' }}</text>
         <text class="username">@{{ userInfo.username }}</text>

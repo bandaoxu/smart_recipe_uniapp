@@ -84,7 +84,7 @@
       <view class="form-item">
         <text class="label">菜系</text>
         <uni-data-picker
-          v-model="formData.cuisine"
+          v-model="formData.cuisine_type"
           :localdata="cuisines"
           placeholder="请选择菜系"
         />
@@ -193,7 +193,7 @@ export default {
         cooking_time: null,
         servings: null,
         category: '',
-        cuisine: '',
+        cuisine_type: '',
         ingredients: [
           { name: '', quantity: '', unit: '' }
         ],

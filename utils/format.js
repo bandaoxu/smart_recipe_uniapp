@@ -16,7 +16,8 @@
 export function formatTime(time, format = 'YYYY-MM-DD HH:mm:ss') {
   if (!time) return ''
 
-  const date = new Date(time)
+  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  const date = new Date(normalized)
   if (isNaN(date.getTime())) return ''
 
   const year = date.getFullYear()
@@ -43,7 +44,8 @@ export function formatTime(time, format = 'YYYY-MM-DD HH:mm:ss') {
 export function formatRelativeTime(time) {
   if (!time) return ''
 
-  const date = new Date(time)
+  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  const date = new Date(normalized)
   if (isNaN(date.getTime())) return ''
 
   const now = new Date()
