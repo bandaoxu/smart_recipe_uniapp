@@ -74,9 +74,19 @@
     <!-- 评论区 -->
     <view class="section">
       <view class="section-header">
-        <text class="section-title">评论</text>
+        <text class="section-title">评论 ({{ comments.length }})</text>
       </view>
       <CommentList :comments="comments" @reply="handleReply" />
+      <!-- 评论输入框 -->
+      <view class="comment-input-area">
+        <input
+          class="comment-input"
+          v-model="commentText"
+          placeholder="写下你的评论..."
+          :placeholder-style="'color: #999'"
+        />
+        <button class="comment-submit" @click="submitComment">发送</button>
+      </view>
     </view>
 
     <!-- 底部操作栏 -->
@@ -110,7 +120,7 @@
  */
 
 import CommentList from '@/components/CommentList.vue'
-import { getRecipeDetail, likeRecipe, favoriteRecipe } from '@/api/recipe'
+import { getRecipeDetail, likeRecipe, favoriteRecipe, getRecipeComments, createRecipeComment } from '@/api/recipe'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
 
 export default {
@@ -122,7 +132,8 @@ export default {
     return {
       recipe: {},
       comments: [],
-      recipeId: null
+      recipeId: null,
+      commentText: ''
     }
   },
   onLoad(options) {
@@ -138,9 +149,12 @@ export default {
      */
     async loadData() {
       try {
-        const res = await getRecipeDetail(this.recipeId)
-        this.recipe = res.data || {}
-        this.comments = this.recipe.comments || []
+        const [recipeRes, commentsRes] = await Promise.all([
+          getRecipeDetail(this.recipeId),
+          getRecipeComments(this.recipeId)
+        ])
+        this.recipe = recipeRes.data || {}
+        this.comments = commentsRes.data || []
       } catch (error) {
         console.error('加载失败:', error)
         uni.showToast({
@@ -198,6 +212,24 @@ export default {
         title: '功能开发中',
         icon: 'none'
       })
+    },
+
+    /**
+     * 发表评论
+     */
+    async submitComment() {
+      if (!this.commentText.trim()) {
+        uni.showToast({ title: '请输入评论内容', icon: 'none' })
+        return
+      }
+      try {
+        const res = await createRecipeComment(this.recipeId, { content: this.commentText })
+        this.comments.push(res.data)
+        this.commentText = ''
+        uni.showToast({ title: '评论成功', icon: 'success' })
+      } catch (error) {
+        uni.showToast({ title: '评论失败，请先登录', icon: 'none' })
+      }
     }
   }
 }
@@ -387,6 +419,40 @@ export default {
 .nutrition-text {
   font-size: 28rpx;
   color: #333333;
+}
+
+.comment-input-area {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.comment-input {
+  flex: 1;
+  height: 72rpx;
+  background-color: #f5f5f5;
+  border-radius: 36rpx;
+  padding: 0 30rpx;
+  font-size: 28rpx;
+}
+
+.comment-submit {
+  width: 120rpx;
+  height: 72rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 36rpx;
+  font-size: 26rpx;
+  color: #ffffff;
+  border: none;
+  padding: 0;
+  line-height: 72rpx;
+}
+
+.comment-submit::after {
+  border: none;
 }
 
 .action-bar {

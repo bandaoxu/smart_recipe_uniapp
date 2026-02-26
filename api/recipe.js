@@ -35,8 +35,7 @@ export const getRecipeList = (params) => {
 export const getRecipeDetail = (id) => {
   return request({
     url: `/recipe/${id}/`,
-    method: 'GET',
-    needAuth: false
+    method: 'GET'
   })
 }
 
@@ -133,5 +132,41 @@ export const searchRecipes = (params) => {
       page: params.page
     },
     needAuth: false
+  })
+}
+
+/**
+ * 获取我的喜欢
+ */
+export const getLiked = (params) => {
+  return request({
+    url: '/recipe/liked/',
+    method: 'GET',
+    params
+  })
+}
+
+/**
+ * 获取食谱评论列表
+ * @param {Number} id - 食谱 ID
+ */
+export const getRecipeComments = (id) => {
+  return request({
+    url: `/community/posts/${id}/comments/`,
+    method: 'GET',
+    needAuth: false
+  })
+}
+
+/**
+ * 发表食谱评论
+ * @param {Number} id - 食谱 ID
+ * @param {Object} data - 评论数据
+ */
+export const createRecipeComment = (id, data) => {
+  return request({
+    url: `/community/posts/${id}/comments/`,
+    method: 'POST',
+    data
   })
 }

@@ -27,6 +27,14 @@
         <text class="menu-arrow">›</text>
       </view>
 
+      <view class="menu-item" @click="goToLikes">
+        <view class="menu-left">
+          <text class="menu-icon">👍</text>
+          <text class="menu-text">我的喜欢</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
       <view class="menu-item" @click="editProfile">
         <view class="menu-left">
           <text class="menu-icon">✏️</text>
@@ -121,6 +129,15 @@ export default {
     goToFavorites() {
       uni.navigateTo({
         url: '/pages/user/favorites'
+      })
+    },
+
+    /**
+     * 跳转到我的喜欢
+     */
+    goToLikes() {
+      uni.navigateTo({
+        url: '/pages/user/my-likes'
       })
     },
 
