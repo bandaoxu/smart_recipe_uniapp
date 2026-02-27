@@ -192,6 +192,7 @@ export default {
         await userStore.register({
           username: this.formData.username,
           password: this.formData.password,
+          password_confirm: this.formData.confirmPassword,
           email: this.formData.email,
           phone: this.formData.phone,
           nickname: this.formData.nickname

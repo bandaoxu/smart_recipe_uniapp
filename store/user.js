@@ -78,7 +78,7 @@ export const useUserStore = defineStore('user', {
         const res = await registerApi(data)
 
         // 注册成功后自动登录
-        if (res.code === 201) {
+        if (res.code === 200) {
           await this.login({
             username: data.username,
             password: data.password
