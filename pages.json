@@ -105,6 +105,18 @@
         "navigationBarTitleText": "我的喜欢",
         "enablePullDownRefresh": true
       }
+    },
+    {
+      "path": "pages/user/edit-profile",
+      "style": {
+        "navigationBarTitleText": "编辑资料"
+      }
+    },
+    {
+      "path": "pages/user/settings",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
     }
   ],
   "tabBar": {

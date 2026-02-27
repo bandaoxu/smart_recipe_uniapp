@@ -145,9 +145,8 @@ export default {
      * 编辑资料
      */
     editProfile() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/edit-profile'
       })
     },
 
@@ -155,9 +154,8 @@ export default {
      * 设置
      */
     showSettings() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/settings'
       })
     },
 
