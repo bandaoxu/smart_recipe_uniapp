@@ -4,6 +4,7 @@
  * 功能：
  * 1. 获取购物清单
  * 2. 添加、更新、删除食材
+ * 3. 基于食谱生成购物清单
  */
 
 import request from './request'
@@ -55,5 +56,19 @@ export const deleteShoppingItem = (id) => {
   return request({
     url: `/shopping-list/${id}/`,
     method: 'DELETE'
+  })
+}
+
+/**
+ * 基于食谱生成购物清单
+ * 将指定食谱的所有食材批量加入购物清单，已存在的食材自动累加数量
+ * @param {Object} data - 请求数据
+ * @param {Number} data.recipe_id - 食谱 ID
+ */
+export const generateShoppingList = (data) => {
+  return request({
+    url: '/shopping-list/generate/',
+    method: 'POST',
+    data
   })
 }

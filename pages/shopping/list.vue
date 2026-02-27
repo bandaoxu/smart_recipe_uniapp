@@ -133,6 +133,9 @@ export default {
   onLoad() {
     this.loadData()
   },
+  onShow() {
+    this.loadData()
+  },
   onPullDownRefresh() {
     this.loadData().then(() => {
       uni.stopPullDownRefresh()

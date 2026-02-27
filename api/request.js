@@ -29,7 +29,7 @@ async function refreshToken() {
 
   try {
     const res = await uni.request({
-      url: `${BASE_URL}/user/token/refresh/`,
+      url: `${BASE_URL.replace('/api', '')}/api/token/refresh/`,
       method: 'POST',
       data: { refresh }
     })

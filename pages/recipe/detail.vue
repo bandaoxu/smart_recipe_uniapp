@@ -121,6 +121,8 @@
 
 import CommentList from '@/components/CommentList.vue'
 import { getRecipeDetail, likeRecipe, favoriteRecipe, getRecipeComments, createRecipeComment } from '@/api/recipe'
+import { generateShoppingList } from '@/api/shopping'
+import { useUserStore } from '@/store'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
 
 export default {
@@ -196,12 +198,53 @@ export default {
 
     /**
      * 添加到购物清单
+     * 将食谱所有食材批量加入购物清单，已存在的食材自动累加数量
      */
-    addToShoppingList() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
-      })
+    async addToShoppingList() {
+      const userStore = useUserStore()
+      if (!userStore.isLoggedIn) {
+        uni.showModal({
+          title: '提示',
+          content: '请先登录后再添加到购物清单',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              uni.navigateTo({ url: '/pages/user/login' })
+            }
+          }
+        })
+        return
+      }
+
+      if (!this.recipe.ingredients || this.recipe.ingredients.length === 0) {
+        uni.showToast({ title: '该食谱暂无食材信息', icon: 'none' })
+        return
+      }
+
+      try {
+        uni.showLoading({ title: '添加中...' })
+        const res = await generateShoppingList({ recipe_id: parseInt(this.recipeId) })
+
+        const added = res.data?.added_count ?? 0
+        const total = res.data?.total_ingredients ?? 0
+        uni.showModal({
+          title: '添加成功',
+          content: `已将 ${total} 种食材加入购物清单（新增 ${added} 种）`,
+          confirmText: '查看清单',
+          cancelText: '继续浏览',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              uni.switchTab({ url: '/pages/shopping/list' })
+            }
+          }
+        })
+      } catch (error) {
+        if (!error?.data) {
+          uni.showToast({ title: '网络错误，请重试', icon: 'none' })
+        }
+      } finally {
+        try { uni.hideLoading() } catch (e) {}
+      }
     },
 
     /**
