@@ -51,7 +51,7 @@
         <view class="section-title">
           <text>评论 ({{ comments.length }})</text>
         </view>
-        <CommentList :comments="comments" />
+        <CommentList :comments="comments" @reply="handleReply" />
 
         <!-- 空状态 -->
         <view class="empty-comments" v-if="comments.length === 0">
@@ -81,11 +81,15 @@
     <!-- 评论输入弹窗 -->
     <view class="comment-modal" v-if="showModal" @click="hideCommentInput">
       <view class="modal-content" @click.stop>
+        <view v-if="replyingTo" class="reply-hint">
+          <text class="reply-hint-text">回复 @{{ replyingTo.user?.nickname }}</text>
+          <text class="cancel-reply" @click="replyingTo = null">取消回复</text>
+        </view>
         <uni-easyinput
           type="textarea"
           class="comment-textarea"
           v-model="commentContent"
-          placeholder="写下你的评论..."
+          :placeholder="replyingTo ? '回复 @' + replyingTo.user?.nickname + '...' : '写下你的评论...'"
           :focus="true"
           :maxlength="500"
           :inputBorder="false"
@@ -128,7 +132,8 @@ export default {
       loading: true,
       showModal: false,
       commentContent: '',
-      submitting: false
+      submitting: false,
+      replyingTo: null
     }
   },
   onLoad(options) {
@@ -151,7 +156,7 @@ export default {
 
         // 加载评论列表
         const commentsRes = await getComments(this.postId)
-        this.comments = commentsRes.data.results || []
+        this.comments = commentsRes.data || []
 
       } catch (error) {
         console.error('加载失败:', error)
@@ -220,6 +225,15 @@ export default {
     hideCommentInput() {
       this.showModal = false
       this.commentContent = ''
+      this.replyingTo = null
+    },
+
+    /**
+     * 回复评论
+     */
+    handleReply(comment) {
+      this.replyingTo = comment
+      this.showModal = true
     },
 
     /**
@@ -238,7 +252,8 @@ export default {
 
       try {
         await createComment(this.postId, {
-          content: this.commentContent
+          content: this.commentContent,
+          ...(this.replyingTo ? { parent: this.replyingTo.id } : {})
         })
 
         uni.showToast({
@@ -250,7 +265,7 @@ export default {
 
         // 重新加载评论列表
         const commentsRes = await getComments(this.postId)
-        this.comments = commentsRes.data.results || []
+        this.comments = commentsRes.data || []
         this.post.comments_count = this.comments.length
 
       } catch (error) {
@@ -533,5 +548,24 @@ export default {
 .submit-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #ffffff;
+}
+
+.reply-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.reply-hint-text {
+  font-size: 26rpx;
+  color: #667eea;
+}
+
+.cancel-reply {
+  font-size: 24rpx;
+  color: #999999;
 }
 </style>

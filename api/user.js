@@ -76,3 +76,29 @@ export const updateProfile = (data) => {
     data
   })
 }
+
+/**
+ * 部分更新用户信息（PATCH）
+ * @param {Object} data - 要更新的字段
+ */
+export const patchProfile = (data) => {
+  return request({
+    url: '/user/profile/',
+    method: 'PATCH',
+    data
+  })
+}
+
+/**
+ * 修改密码
+ * @param {Object} data
+ * @param {String} data.old_password - 旧密码
+ * @param {String} data.new_password - 新密码
+ */
+export const changePassword = (data) => {
+  return request({
+    url: '/user/change-password/',
+    method: 'POST',
+    data
+  })
+}

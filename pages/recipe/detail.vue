@@ -77,31 +77,50 @@
         <text class="section-title">评论 ({{ comments.length }})</text>
       </view>
       <CommentList :comments="comments" @reply="handleReply" />
-      <!-- 评论输入框 -->
-      <view class="comment-input-area">
-        <input
-          class="comment-input"
-          v-model="commentText"
-          placeholder="写下你的评论..."
-          :placeholder-style="'color: #999'"
-        />
-        <button class="comment-submit" @click="submitComment">发送</button>
+      
+      <!-- 空状态 -->
+      <view class="empty-comments" v-if="comments.length === 0">
+        <text class="empty-text">还没有评论，快来抢沙发吧~</text>
       </view>
     </view>
 
     <!-- 底部操作栏 -->
     <view class="action-bar">
-      <view class="action-item" @click="handleLike">
-        <text class="action-icon">{{ recipe.is_liked ? '❤️' : '🤍' }}</text>
-        <text class="action-text">{{ recipe.likes }}</text>
+      <view class="comment-input" @click="showCommentInput">
+        <text class="input-placeholder">说点什么...</text>
       </view>
-      <view class="action-item" @click="handleFavorite">
-        <text class="action-icon">{{ recipe.is_favorited ? '⭐' : '☆' }}</text>
-        <text class="action-text">{{ recipe.favorites }}</text>
+      <view class="action-buttons">
+        <view class="action-btn" @click="handleLike">
+          <text class="action-icon">{{ recipe.is_liked ? '❤️' : '🤍' }}</text>
+          <text class="action-text">{{ recipe.likes }}</text>
+        </view>
+        <view class="action-btn" @click="handleFavorite">
+          <text class="action-icon">{{ recipe.is_favorited ? '⭐' : '☆' }}</text>
+          <text class="action-text">{{ recipe.favorites }}</text>
+        </view>
       </view>
-      <view class="action-item">
-        <text class="action-icon">💬</text>
-        <text class="action-text">评论</text>
+    </view>
+
+    <!-- 评论输入弹窗 -->
+    <view class="comment-modal" v-if="showModal" @click="hideCommentInput">
+      <view class="modal-content" @click.stop>
+        <view v-if="replyingTo" class="reply-hint">
+          <text class="reply-hint-text">回复 @{{ replyingTo.user?.nickname }}</text>
+          <text class="cancel-reply" @click="replyingTo = null">取消回复</text>
+        </view>
+        <uni-easyinput
+          type="textarea"
+          class="comment-textarea"
+          v-model="commentText"
+          :placeholder="replyingTo ? '回复 @' + replyingTo.user?.nickname + '...' : '写下你的评论...'"
+          :focus="true"
+          :maxlength="500"
+          :inputBorder="false"
+        />
+        <view class="modal-actions">
+          <button class="cancel-btn" @click="hideCommentInput">取消</button>
+          <button class="submit-btn" @click="submitComment" :loading="submitting">发送</button>
+        </view>
       </view>
     </view>
   </view>
@@ -135,7 +154,10 @@ export default {
       recipe: {},
       comments: [],
       recipeId: null,
-      commentText: ''
+      commentText: '',
+      showModal: false,
+      submitting: false,
+      replyingTo: null
     }
   },
   onLoad(options) {
@@ -251,10 +273,24 @@ export default {
      * 回复评论
      */
     handleReply(comment) {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
-      })
+      this.replyingTo = comment
+      this.showModal = true
+    },
+
+    /**
+     * 显示评论输入框
+     */
+    showCommentInput() {
+      this.showModal = true
+    },
+
+    /**
+     * 隐藏评论输入框
+     */
+    hideCommentInput() {
+      this.showModal = false
+      this.commentText = ''
+      this.replyingTo = null
     },
 
     /**
@@ -265,13 +301,34 @@ export default {
         uni.showToast({ title: '请输入评论内容', icon: 'none' })
         return
       }
+
+      this.submitting = true
+
       try {
-        const res = await createRecipeComment(this.recipeId, { content: this.commentText })
-        this.comments.push(res.data)
-        this.commentText = ''
-        uni.showToast({ title: '评论成功', icon: 'success' })
+        await createRecipeComment(this.recipeId, {
+          content: this.commentText,
+          ...(this.replyingTo ? { parent: this.replyingTo.id } : {})
+        })
+
+        uni.showToast({
+          title: '评论成功',
+          icon: 'success'
+        })
+
+        this.hideCommentInput()
+
+        // 重新加载评论列表
+        const commentsRes = await getRecipeComments(this.recipeId)
+        this.comments = commentsRes.data || []
+
       } catch (error) {
-        uni.showToast({ title: '评论失败，请先登录', icon: 'none' })
+        console.error('评论失败:', error)
+        uni.showToast({
+          title: error.message || '评论失败',
+          icon: 'none'
+        })
+      } finally {
+        this.submitting = false
       }
     }
   }
@@ -464,38 +521,96 @@ export default {
   color: #333333;
 }
 
-.comment-input-area {
+.empty-comments {
+  text-align: center;
+  padding: 80rpx 0;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+.comment-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 40rpx;
+}
+
+.comment-textarea {
+  margin-bottom: 30rpx;
+}
+
+.comment-textarea ::v-deep .uni-easyinput__content {
+  background-color: #f5f5f5;
+  border-radius: 12rpx;
+}
+
+.comment-textarea ::v-deep .uni-easyinput__content-textarea {
+  font-size: 28rpx;
+  color: #333333;
+  min-height: 200rpx;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cancel-btn,
+.submit-btn {
+  padding: 20rpx 50rpx;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.cancel-btn {
+  background-color: #f5f5f5;
+  color: #666666;
+  margin-right: 20rpx;
+}
+
+.cancel-btn::after,
+.submit-btn::after {
+  border: none;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+}
+
+.reply-hint {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid #f0f0f0;
+  justify-content: space-between;
+  padding: 16rpx 0 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
 }
 
-.comment-input {
-  flex: 1;
-  height: 72rpx;
-  background-color: #f5f5f5;
-  border-radius: 36rpx;
-  padding: 0 30rpx;
-  font-size: 28rpx;
-}
-
-.comment-submit {
-  width: 120rpx;
-  height: 72rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 36rpx;
+.reply-hint-text {
   font-size: 26rpx;
-  color: #ffffff;
-  border: none;
-  padding: 0;
-  line-height: 72rpx;
+  color: #667eea;
 }
 
-.comment-submit::after {
-  border: none;
+.cancel-reply {
+  font-size: 24rpx;
+  color: #999999;
 }
 
 .action-bar {
@@ -503,11 +618,40 @@ export default {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #ffffff;
-  padding: 20rpx 40rpx;
   display: flex;
-  justify-content: space-around;
-  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  align-items: center;
+  padding: 20rpx;
+  background-color: #ffffff;
+  border-top: 1rpx solid #f0f0f0;
+  z-index: 100;
+}
+
+.comment-input {
+  flex: 1;
+  height: 70rpx;
+  background-color: #f5f5f5;
+  border-radius: 35rpx;
+  padding: 0 30rpx;
+  display: flex;
+  align-items: center;
+  margin-right: 20rpx;
+}
+
+.input-placeholder {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 30rpx;
 }
 
 .action-item {

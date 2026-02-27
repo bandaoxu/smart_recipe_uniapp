@@ -58,7 +58,7 @@ export const createRecipe = (data) => {
  */
 export const updateRecipe = (id, data) => {
   return request({
-    url: `/recipe/${id}/`,
+    url: `/recipe/${id}/update/`,
     method: 'PUT',
     data
   })
@@ -70,7 +70,7 @@ export const updateRecipe = (id, data) => {
  */
 export const deleteRecipe = (id) => {
   return request({
-    url: `/recipe/${id}/`,
+    url: `/recipe/${id}/delete/`,
     method: 'DELETE'
   })
 }
