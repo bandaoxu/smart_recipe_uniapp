@@ -18,10 +18,8 @@
       <button class="publish-btn" @click="goToPublish">发布第一条动态</button>
     </view>
 
-    <!-- 加载中 -->
-    <view class="loading" v-if="loading">
-      <text>加载中...</text>
-    </view>
+    <!-- 加载更多 -->
+    <LoadingMore :loading="loading" :hasMore="hasMore" />
 
     <!-- 发布按钮 -->
     <view class="fab" @click="goToPublish">
@@ -43,12 +41,14 @@
  */
 
 import PostCard from '@/components/PostCard.vue'
+import LoadingMore from '@/components/LoadingMore.vue'
 import { getPostList, likePost } from '@/api/community'
 
 export default {
   name: 'CommunityFeed',
   components: {
-    PostCard
+    PostCard,
+    LoadingMore
   },
   data() {
     return {

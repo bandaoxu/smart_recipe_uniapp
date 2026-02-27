@@ -42,7 +42,7 @@ export const addShoppingItem = (data) => {
 export const updateShoppingItem = (id, data) => {
   return request({
     url: `/shopping-list/${id}/`,
-    method: 'PUT',
+    method: 'PATCH',
     data
   })
 }

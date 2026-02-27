@@ -58,10 +58,8 @@
       <text class="empty-text">暂无食谱</text>
     </view>
 
-    <!-- 加载中 -->
-    <view class="loading" v-if="loading">
-      <text>加载中...</text>
-    </view>
+    <!-- 加载更多 -->
+    <LoadingMore :loading="loading" :hasMore="hasMore" />
   </view>
 </template>
 
@@ -79,12 +77,14 @@
  */
 
 import RecipeCard from '@/components/RecipeCard.vue'
+import LoadingMore from '@/components/LoadingMore.vue'
 import { getRecipeList } from '@/api/recipe'
 
 export default {
   name: 'RecipeList',
   components: {
-    RecipeCard
+    RecipeCard,
+    LoadingMore
   },
   data() {
     return {

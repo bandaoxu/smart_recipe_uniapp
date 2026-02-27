@@ -7,12 +7,13 @@
         v-for="item in items"
         :key="item.id"
       >
-        <uni-data-checkbox
-          v-model="item.is_purchased"
-          :localdata="[{text: '', value: true}]"
-          mode="tag"
-          @change="togglePurchased(item)"
-        />
+        <view class="check-icon" @tap="togglePurchased(item)">
+          <uni-icons
+            :type="item.is_purchased ? 'checkmarkempty' : 'circle'"
+            :color="item.is_purchased ? '#3cc51f' : '#cccccc'"
+            size="24"
+          />
+        </view>
         <view class="item-content" :class="{ purchased: item.is_purchased }">
           <text class="item-name">{{ item.ingredient?.name || item.name }}</text>
           <text class="item-quantity">{{ item.quantity }} {{ item.unit }}</text>
@@ -61,7 +62,7 @@
           <view class="form-item">
             <text class="label">食材名称</text>
             <uni-easyinput
-              v-model="newItem.name"
+              v-model="newItem.ingredient_name"
               placeholder="请输入食材名称"
               :clearable="true"
               :inputBorder="false"
@@ -118,7 +119,7 @@ export default {
       showModal: false,
       submitting: false,
       newItem: {
-        name: '',
+        ingredient_name: '',
         quantity: '',
         unit: ''
       }
@@ -146,7 +147,7 @@ export default {
 
       try {
         const res = await getShoppingList()
-        this.items = res.data.results || []
+        this.items = Array.isArray(res.data) ? res.data : (res.data.results || [])
 
       } catch (error) {
         console.error('加载失败:', error)
@@ -265,7 +266,7 @@ export default {
     hideAddModal() {
       this.showModal = false
       this.newItem = {
-        name: '',
+        ingredient_name: '',
         quantity: '',
         unit: ''
       }
@@ -275,7 +276,7 @@ export default {
      * 添加食材
      */
     async addItem() {
-      if (!this.newItem.name) {
+      if (!this.newItem.ingredient_name) {
         uni.showToast({
           title: '请输入食材名称',
           icon: 'none'

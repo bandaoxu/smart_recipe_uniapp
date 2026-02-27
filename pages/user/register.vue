@@ -2,7 +2,7 @@
   <view class="register-container">
     <!-- Logo 区域 -->
     <view class="logo-section">
-      <image class="logo" src="/static/images/logo.png" mode="aspectFit"></image>
+      <image class="logo" src="/static/images/logo.svg" mode="aspectFit"></image>
       <text class="app-name">注册账号</text>
     </view>
 

@@ -2,7 +2,7 @@
   <view class="login-container">
     <!-- Logo 区域 -->
     <view class="logo-section">
-      <image class="logo" src="/static/images/logo.png" mode="aspectFit"></image>
+      <image class="logo" src="/static/images/logo.svg" mode="aspectFit"></image>
       <text class="app-name">智能食谱</text>
       <text class="app-slogan">让烹饪变得简单</text>
     </view>
