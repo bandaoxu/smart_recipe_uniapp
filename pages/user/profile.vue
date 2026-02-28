@@ -43,6 +43,14 @@
         <text class="menu-arrow">›</text>
       </view>
 
+      <view class="menu-item" @click="goToHistory">
+        <view class="menu-left">
+          <text class="menu-icon">🕐</text>
+          <text class="menu-text">浏览历史</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
       <view class="menu-item" @click="goToDiary">
         <view class="menu-left">
           <text class="menu-icon">📊</text>
@@ -163,6 +171,12 @@ export default {
     goToFollowing() {
       uni.navigateTo({
         url: '/pages/user/following'
+      })
+    },
+
+    goToHistory() {
+      uni.navigateTo({
+        url: '/pages/user/history'
       })
     },
 

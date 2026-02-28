@@ -200,3 +200,6 @@ export const getHotRecipes = (limit = 10) => {
     needAuth: false
   })
 }
+
+export const getBrowseHistory = () =>
+  request({ url: '/recipe/history/', method: 'GET' })

@@ -47,7 +47,29 @@
           placeholder="请输入手机号"
           :clearable="true"
           :inputBorder="false"
+          maxlength="11"
         />
+      </view>
+
+      <view class="form-item">
+        <text class="label">短信验证码</text>
+        <view class="code-row">
+          <uni-easyinput
+            class="code-input"
+            v-model="formData.code"
+            placeholder="请输入验证码"
+            :inputBorder="false"
+            type="number"
+            maxlength="6"
+          />
+          <view
+            class="send-code-btn"
+            :class="{ disabled: codeCounting }"
+            @click="sendVerifyCode"
+          >
+            <text>{{ codeCounting ? countdown + 's' : '发送验证码' }}</text>
+          </view>
+        </view>
       </view>
 
       <view class="form-item">
@@ -103,6 +125,7 @@
  */
 
 import { useUserStore } from '@/store'
+import { sendCode } from '@/api/user'
 import { validateUsername, validatePassword, validatePasswordConfirm, validateEmail, validatePhone } from '@/utils/validate'
 
 export default {
@@ -114,14 +137,49 @@ export default {
         nickname: '',
         email: '',
         phone: '',
+        code: '',
         password: '',
         confirmPassword: ''
       },
       errorMessage: '',
-      loading: false
+      loading: false,
+      codeCounting: false,
+      countdown: 60,
+      countdownTimer: null
     }
   },
+  onUnload() {
+    clearInterval(this.countdownTimer)
+  },
   methods: {
+    async sendVerifyCode() {
+      if (this.codeCounting) return
+      const phone = this.formData.phone.trim()
+      if (!phone || phone.length !== 11) {
+        this.errorMessage = '请先填写正确的手机号'
+        return
+      }
+      this.errorMessage = ''
+      try {
+        const res = await sendCode(phone)
+        if (res.data?.code) {
+          uni.showModal({ title: '验证码（开发模式）', content: res.data.code, showCancel: false })
+        } else {
+          uni.showToast({ title: '验证码已发送', icon: 'none' })
+        }
+        this.codeCounting = true
+        this.countdown = 60
+        this.countdownTimer = setInterval(() => {
+          this.countdown--
+          if (this.countdown <= 0) {
+            clearInterval(this.countdownTimer)
+            this.codeCounting = false
+          }
+        }, 1000)
+      } catch (error) {
+        this.errorMessage = error.message || '发送失败'
+      }
+    },
     /**
      * 表单验证
      */
@@ -152,6 +210,12 @@ export default {
       const phoneError = validatePhone(phone)
       if (phoneError) {
         this.errorMessage = phoneError
+        return false
+      }
+
+      // 验证验证码
+      if (!this.formData.code || this.formData.code.length !== 6) {
+        this.errorMessage = '请填写6位验证码'
         return false
       }
 
@@ -195,6 +259,7 @@ export default {
           password_confirm: this.formData.confirmPassword,
           email: this.formData.email,
           phone: this.formData.phone,
+          code: this.formData.code,
           nickname: this.formData.nickname
         })
 
@@ -275,6 +340,36 @@ export default {
   font-size: 28rpx;
   color: #333333;
   height: 80rpx;
+}
+
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.code-input {
+  flex: 1;
+}
+
+.send-code-btn {
+  flex-shrink: 0;
+  padding: 0 24rpx;
+  height: 80rpx;
+  background-color: #667eea;
+  border-radius: 10rpx;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+
+  text {
+    font-size: 22rpx;
+    color: #ffffff;
+  }
+
+  &.disabled {
+    background-color: #cccccc;
+  }
 }
 
 .label {

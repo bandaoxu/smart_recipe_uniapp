@@ -12,7 +12,10 @@
       </view>
     </view>
 
-    <!-- 表单区域 -->
+    <!-- 基本信息 -->
+    <view class="section-title-bar">
+      <text class="section-label">基本信息</text>
+    </view>
     <view class="form-section">
       <!-- 昵称 -->
       <view class="form-item">
@@ -46,7 +49,13 @@
           placeholder="请输入年龄"
         />
       </view>
+    </view>
 
+    <!-- 健康档案 -->
+    <view class="section-title-bar">
+      <text class="section-label">健康档案</text>
+    </view>
+    <view class="form-section">
       <!-- 健康目标 -->
       <view class="form-item">
         <text class="form-label">健康目标</text>
@@ -61,6 +70,51 @@
           </view>
         </picker>
       </view>
+
+      <!-- 每日卡路里目标 -->
+      <view class="form-item">
+        <text class="form-label">每日热量目标</text>
+        <view class="input-unit-row">
+          <input
+            class="form-input"
+            v-model="form.daily_calories_target"
+            type="number"
+            placeholder="如 2000"
+          />
+          <text class="unit-text">kcal</text>
+        </view>
+      </view>
+
+      <!-- 饮食偏好 -->
+      <view class="form-item-block">
+        <text class="form-label">饮食偏好</text>
+        <view class="checkbox-group">
+          <label
+            class="checkbox-item"
+            v-for="option in dietaryOptions"
+            :key="option.value"
+            @click="toggleDietary(option.value)"
+          >
+            <view
+              class="checkbox-box"
+              :class="{ checked: form.dietary_preference.includes(option.value) }"
+            >
+              <text v-if="form.dietary_preference.includes(option.value)" class="check-mark">✓</text>
+            </view>
+            <text class="checkbox-label">{{ option.label }}</text>
+          </label>
+        </view>
+      </view>
+
+      <!-- 过敏食材 -->
+      <view class="form-item-block">
+        <text class="form-label">过敏食材</text>
+        <input
+          class="form-input-block"
+          v-model="form.allergiesText"
+          placeholder="多个食材用逗号分隔，如：花生,海鲜"
+        />
+      </view>
     </view>
 
     <!-- 保存按钮 -->
@@ -71,16 +125,8 @@
 </template>
 
 <script>
-/**
- * edit-profile.vue - 编辑资料页面
- *
- * 功能：
- * 1. 展示并修改用户昵称、性别、年龄、健康目标
- * 2. 调用 PATCH /api/user/profile/ 部分更新
- */
-
 import { useUserStore } from '@/store'
-import { getProfile, patchProfile } from '@/api/user'
+import { getProfile, patchProfile, updateHealthProfile } from '@/api/user'
 import { getToken } from '@/utils/auth'
 
 export default {
@@ -93,21 +139,37 @@ export default {
         gender: '',
         age: '',
         health_goal: '',
-        avatar: ''
+        avatar: '',
+        dietary_preference: [],
+        allergiesText: '',
+        daily_calories_target: ''
       },
       genderOptions: [
         { value: 'male', label: '男' },
         { value: 'female', label: '女' },
         { value: 'other', label: '其他' }
       ],
-      healthGoalOptions: ['减肥', '增肌', '保持健康', '改善营养'],
-      healthGoalValues: ['lose_weight', 'gain_muscle', 'maintain', 'improve_nutrition'],
+      healthGoalOptions: ['减脂', '增肌', '均衡饮食', '控糖', '心脏健康'],
+      healthGoalValues: ['lose_fat', 'gain_muscle', 'balanced', 'low_sugar', 'heart_healthy'],
       healthGoalLabels: {
-        lose_weight: '减肥',
+        lose_fat: '减脂',
         gain_muscle: '增肌',
+        balanced: '均衡饮食',
+        low_sugar: '控糖',
+        heart_healthy: '心脏健康',
+        // 兼容旧值
+        lose_weight: '减肥',
         maintain: '保持健康',
         improve_nutrition: '改善营养'
-      }
+      },
+      dietaryOptions: [
+        { value: 'no_restriction', label: '无限制' },
+        { value: 'vegetarian', label: '素食' },
+        { value: 'vegan', label: '纯素' },
+        { value: 'gluten_free', label: '无麸质' },
+        { value: 'low_fat', label: '低脂' },
+        { value: 'low_sugar', label: '低糖' }
+      ]
     }
   },
   computed: {
@@ -134,12 +196,18 @@ export default {
       this.form.age = userInfo.age ? String(userInfo.age) : ''
       this.form.health_goal = userInfo.health_goal || ''
       this.form.avatar = userInfo.avatar || ''
+      this.form.dietary_preference = Array.isArray(userInfo.dietary_preference)
+        ? userInfo.dietary_preference
+        : []
+      this.form.allergiesText = Array.isArray(userInfo.allergies)
+        ? userInfo.allergies.join(',')
+        : (userInfo.allergies || '')
+      this.form.daily_calories_target = userInfo.daily_calories_target
+        ? String(userInfo.daily_calories_target)
+        : ''
     }
   },
   methods: {
-    /**
-     * 选择头像
-     */
     chooseAvatar() {
       uni.chooseImage({
         count: 1,
@@ -151,9 +219,6 @@ export default {
       })
     },
 
-    /**
-     * 上传头像到服务器
-     */
     uploadAvatar(filePath) {
       uni.showLoading({ title: '上传中...' })
       uni.uploadFile({
@@ -179,16 +244,19 @@ export default {
       })
     },
 
-    /**
-     * 健康目标选择
-     */
     onHealthGoalChange(e) {
       this.form.health_goal = this.healthGoalValues[e.detail.value]
     },
 
-    /**
-     * 保存资料
-     */
+    toggleDietary(value) {
+      const idx = this.form.dietary_preference.indexOf(value)
+      if (idx >= 0) {
+        this.form.dietary_preference.splice(idx, 1)
+      } else {
+        this.form.dietary_preference.push(value)
+      }
+    },
+
     async handleSave() {
       if (!this.form.nickname.trim()) {
         uni.showToast({ title: '昵称不能为空', icon: 'none' })
@@ -198,17 +266,33 @@ export default {
       this.saving = true
 
       try {
-        const payload = {
+        // 基本信息更新
+        const basicPayload = {
           nickname: this.form.nickname.trim()
         }
-        if (this.form.gender) payload.gender = this.form.gender
-        if (this.form.age) payload.age = parseInt(this.form.age)
-        if (this.form.health_goal) payload.health_goal = this.form.health_goal
-        if (this.form.avatar) payload.avatar = this.form.avatar
+        if (this.form.gender) basicPayload.gender = this.form.gender
+        if (this.form.age) basicPayload.age = parseInt(this.form.age)
+        if (this.form.avatar) basicPayload.avatar = this.form.avatar
 
-        await patchProfile(payload)
+        // 健康档案更新
+        const allergiesArr = this.form.allergiesText
+          ? this.form.allergiesText.split(',').map(s => s.trim()).filter(Boolean)
+          : []
 
-        // 更新 store 中的用户信息
+        const healthPayload = {
+          dietary_preference: this.form.dietary_preference,
+          allergies: allergiesArr
+        }
+        if (this.form.health_goal) healthPayload.health_goal = this.form.health_goal
+        if (this.form.daily_calories_target) {
+          healthPayload.daily_calories_target = parseInt(this.form.daily_calories_target)
+        }
+
+        await Promise.all([
+          patchProfile(basicPayload),
+          updateHealthProfile(healthPayload)
+        ])
+
         const userStore = useUserStore()
         await userStore.fetchUserInfo()
 
@@ -233,11 +317,43 @@ export default {
 .edit-profile-container {
   min-height: 100vh;
   background-color: #f5f5f5;
+  padding-bottom: 40rpx;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0 40rpx;
+  background-color: #ffffff;
+}
+
+.profile-avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.avatar-tip {
+  font-size: 24rpx;
+  color: #667eea;
+}
+
+.section-title-bar {
+  padding: 24rpx 40rpx 10rpx;
+}
+
+.section-label {
+  font-size: 24rpx;
+  color: #999999;
+  font-weight: 500;
 }
 
 .form-section {
-  margin-top: 20rpx;
   background-color: #ffffff;
+  margin-bottom: 20rpx;
 }
 
 .form-item {
@@ -252,8 +368,17 @@ export default {
   border-bottom: none;
 }
 
+.form-item-block {
+  padding: 30rpx 40rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.form-item-block:last-child {
+  border-bottom: none;
+}
+
 .form-label {
-  width: 140rpx;
+  width: 160rpx;
   font-size: 28rpx;
   color: #333333;
   flex-shrink: 0;
@@ -264,6 +389,29 @@ export default {
   font-size: 28rpx;
   color: #333333;
   text-align: right;
+}
+
+.input-unit-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10rpx;
+}
+
+.unit-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.form-input-block {
+  display: block;
+  width: 100%;
+  font-size: 28rpx;
+  color: #333333;
+  margin-top: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
 .radio-group {
@@ -302,8 +450,47 @@ export default {
   margin-left: 10rpx;
 }
 
+/* 饮食偏好复选框 */
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.checkbox-box {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #cccccc;
+  border-radius: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.checked {
+    background-color: #667eea;
+    border-color: #667eea;
+  }
+}
+
+.check-mark {
+  font-size: 26rpx;
+  color: #ffffff;
+}
+
+.checkbox-label {
+  font-size: 26rpx;
+  color: #333333;
+}
+
 .save-section {
-  padding: 60rpx 40rpx 40rpx;
+  padding: 40rpx 40rpx;
 }
 
 .save-btn {
@@ -318,27 +505,5 @@ export default {
 
 .save-btn::after {
   border: none;
-}
-
-.avatar-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60rpx 0 40rpx;
-  background-color: #ffffff;
-  margin-bottom: 20rpx;
-}
-
-.profile-avatar {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 50%;
-  border: 4rpx solid #f0f0f0;
-  margin-bottom: 20rpx;
-}
-
-.avatar-tip {
-  font-size: 24rpx;
-  color: #667eea;
 }
 </style>

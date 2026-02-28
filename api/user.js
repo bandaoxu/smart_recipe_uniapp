@@ -146,3 +146,15 @@ export const getPublicProfile = (userId) => {
     needAuth: false
   })
 }
+
+export const sendCode = (phone) =>
+  request({ url: '/user/send-code/', method: 'POST', data: { phone }, needAuth: false })
+
+export const loginWithPhone = (phone, code) =>
+  request({ url: '/user/login/', method: 'POST', data: { phone, code, login_type: 'phone_code' }, needAuth: false })
+
+export const updateHealthProfile = (data) =>
+  request({ url: '/user/health-profile/', method: 'POST', data })
+
+export const getHealthProfile = () =>
+  request({ url: '/user/health-profile/', method: 'GET' })

@@ -147,6 +147,13 @@
       "style": {
         "navigationBarTitleText": "食材识别"
       }
+    },
+    {
+      "path": "pages/user/history",
+      "style": {
+        "navigationBarTitleText": "浏览历史",
+        "enablePullDownRefresh": true
+      }
     }
   ],
   "tabBar": {

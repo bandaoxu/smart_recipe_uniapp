@@ -27,7 +27,7 @@
           >
             <image
               class="hot-cover"
-              :src="r.cover_image || '/static/images/default-recipe.png'"
+              :src="r.cover_image || '/static/images/default-recipe.svg'"
               mode="aspectFill"
             />
             <view class="hot-info">

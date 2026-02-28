@@ -106,7 +106,7 @@
             :key="recipe.id"
             @click="selectRecipe(recipe)"
           >
-            <image class="search-cover" :src="recipe.cover_image || '/static/images/default-recipe.png'" mode="aspectFill" />
+            <image class="search-cover" :src="recipe.cover_image || '/static/images/default-recipe.svg'" mode="aspectFill" />
             <view class="search-info">
               <text class="search-name">{{ recipe.name }}</text>
               <text class="search-cal">{{ recipe.total_calories || '—' }} 千卡</text>

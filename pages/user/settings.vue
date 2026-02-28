@@ -119,7 +119,7 @@ export default {
       this.changingPwd = true
 
       try {
-        await changePassword({ old_password, new_password })
+        await changePassword({ old_password, new_password, new_password_confirm: confirm_password })
         uni.showToast({ title: '修改成功', icon: 'success' })
         this.closePasswordModal()
       } catch (error) {

@@ -52,7 +52,7 @@
             :key="recipe.id"
             @click="goToRecipe(recipe.id)"
           >
-            <image class="recipe-cover" :src="recipe.cover_image || '/static/images/default-recipe.png'" mode="aspectFill" />
+            <image class="recipe-cover" :src="recipe.cover_image || '/static/images/default-recipe.svg'" mode="aspectFill" />
             <view class="recipe-info">
               <text class="recipe-name">{{ recipe.name }}</text>
               <view class="recipe-meta">

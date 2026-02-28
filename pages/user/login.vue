@@ -9,25 +9,76 @@
 
     <!-- 登录表单 -->
     <view class="form-section">
-      <view class="form-item">
-        <text class="label">用户名</text>
-        <uni-easyinput
-          v-model="formData.username"
-          placeholder="请输入用户名"
-          :clearable="true"
-          :inputBorder="false"
-        />
+      <!-- Tab 切换 -->
+      <view class="login-tabs">
+        <view
+          class="tab-item"
+          :class="{ active: loginTab === 'password' }"
+          @click="loginTab = 'password'"
+        >账号登录</view>
+        <view
+          class="tab-item"
+          :class="{ active: loginTab === 'phone' }"
+          @click="loginTab = 'phone'"
+        >手机验证码</view>
       </view>
 
-      <view class="form-item">
-        <text class="label">密码</text>
-        <uni-easyinput
-          v-model="formData.password"
-          type="password"
-          placeholder="请输入密码"
-          :clearable="true"
-          :inputBorder="false"
-        />
+      <!-- 账号密码登录 -->
+      <view v-if="loginTab === 'password'">
+        <view class="form-item">
+          <text class="label">用户名</text>
+          <uni-easyinput
+            v-model="formData.username"
+            placeholder="请输入用户名"
+            :clearable="true"
+            :inputBorder="false"
+          />
+        </view>
+        <view class="form-item">
+          <text class="label">密码</text>
+          <uni-easyinput
+            v-model="formData.password"
+            type="password"
+            placeholder="请输入密码"
+            :clearable="true"
+            :inputBorder="false"
+          />
+        </view>
+      </view>
+
+      <!-- 手机验证码登录 -->
+      <view v-if="loginTab === 'phone'">
+        <view class="form-item">
+          <text class="label">手机号</text>
+          <uni-easyinput
+            v-model="phoneData.phone"
+            placeholder="请输入手机号"
+            :clearable="true"
+            :inputBorder="false"
+            type="number"
+            maxlength="11"
+          />
+        </view>
+        <view class="form-item">
+          <text class="label">验证码</text>
+          <view class="code-row">
+            <uni-easyinput
+              class="code-input"
+              v-model="phoneData.code"
+              placeholder="请输入验证码"
+              :inputBorder="false"
+              type="number"
+              maxlength="6"
+            />
+            <view
+              class="send-code-btn"
+              :class="{ disabled: codeCounting }"
+              @click="sendVerifyCode"
+            >
+              <text>{{ codeCounting ? countdown + 's后重发' : '发送验证码' }}</text>
+            </view>
+          </view>
+        </view>
       </view>
 
       <!-- 错误提示 -->
@@ -50,104 +101,104 @@
 </template>
 
 <script>
-/**
- * login.vue - 用户登录页面
- *
- * 功能：
- * 1. 用户名/密码登录
- * 2. 表单验证
- * 3. 调用登录 API
- * 4. 存储 Token
- * 5. 跳转到首页
- */
-
 import { useUserStore } from '@/store'
+import { sendCode, loginWithPhone } from '@/api/user'
 import { validateUsername, validatePassword } from '@/utils/validate'
+import { setToken } from '@/utils/auth'
 
 export default {
   name: 'Login',
   data() {
     return {
-      formData: {
-        username: '',
-        password: ''
-      },
+      loginTab: 'password',
+      formData: { username: '', password: '' },
+      phoneData: { phone: '', code: '' },
       errorMessage: '',
-      loading: false
+      loading: false,
+      codeCounting: false,
+      countdown: 60,
+      countdownTimer: null
     }
   },
+  onUnload() {
+    clearInterval(this.countdownTimer)
+  },
   methods: {
-    /**
-     * 表单验证
-     */
-    validateForm() {
-      // 验证用户名
-      const usernameError = validateUsername(this.formData.username)
-      if (usernameError) {
-        this.errorMessage = usernameError
-        return false
-      }
-
-      // 验证密码
-      const passwordError = validatePassword(this.formData.password)
-      if (passwordError) {
-        this.errorMessage = passwordError
-        return false
-      }
-
-      this.errorMessage = ''
-      return true
-    },
-
-    /**
-     * 处理登录
-     */
-    async handleLogin() {
-      // 表单验证
-      if (!this.validateForm()) {
+    async sendVerifyCode() {
+      if (this.codeCounting) return
+      const phone = this.phoneData.phone.trim()
+      if (!phone || phone.length !== 11) {
+        this.errorMessage = '请输入正确的手机号'
         return
       }
-
-      this.loading = true
       this.errorMessage = ''
-
       try {
-        const userStore = useUserStore()
+        const res = await sendCode(phone)
+        // 开发模式：弹窗显示验证码
+        if (res.data?.code) {
+          uni.showModal({ title: '验证码（开发模式）', content: res.data.code, showCancel: false })
+        } else {
+          uni.showToast({ title: '验证码已发送', icon: 'none' })
+        }
+        this.startCountdown()
+      } catch (error) {
+        this.errorMessage = error.message || '发送失败'
+      }
+    },
 
-        // 调用登录 API
-        await userStore.login({
-          username: this.formData.username,
-          password: this.formData.password
-        })
+    startCountdown() {
+      this.codeCounting = true
+      this.countdown = 60
+      this.countdownTimer = setInterval(() => {
+        this.countdown--
+        if (this.countdown <= 0) {
+          clearInterval(this.countdownTimer)
+          this.codeCounting = false
+        }
+      }, 1000)
+    },
 
-        // 登录成功提示
-        uni.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
-
-        // 延迟跳转到首页
+    async handleLogin() {
+      this.errorMessage = ''
+      this.loading = true
+      try {
+        if (this.loginTab === 'phone') {
+          // 手机验证码登录
+          const { phone, code } = this.phoneData
+          if (!phone || !code) {
+            this.errorMessage = '请填写手机号和验证码'
+            return
+          }
+          const res = await loginWithPhone(phone, code)
+          const userStore = useUserStore()
+          // 与 store.login 逻辑一致：存 token + 获取 profile
+          setToken({ access: res.data.access, refresh: res.data.refresh })
+          userStore.token = res.data.access
+          userStore.isLoggedIn = true
+          await userStore.fetchUserInfo()
+        } else {
+          // 账号密码登录
+          const usernameError = validateUsername(this.formData.username)
+          if (usernameError) { this.errorMessage = usernameError; return }
+          const passwordError = validatePassword(this.formData.password)
+          if (passwordError) { this.errorMessage = passwordError; return }
+          const userStore = useUserStore()
+          await userStore.login({ username: this.formData.username, password: this.formData.password })
+        }
+        uni.showToast({ title: '登录成功', icon: 'success' })
         setTimeout(() => {
-          uni.switchTab({
-            url: '/pages/index/index'
-          })
+          uni.switchTab({ url: '/pages/index/index' })
         }, 1000)
-
       } catch (error) {
         console.error('登录失败:', error)
-        this.errorMessage = error.message || '登录失败，请检查用户名和密码'
+        this.errorMessage = error.message || '登录失败，请检查信息后重试'
       } finally {
         this.loading = false
       }
     },
 
-    /**
-     * 跳转到注册页面
-     */
     goToRegister() {
-      uni.navigateTo({
-        url: '/pages/user/register'
-      })
+      uni.navigateTo({ url: '/pages/user/register' })
     }
   }
 }
@@ -162,7 +213,7 @@ export default {
 
 .logo-section {
   text-align: center;
-  margin-bottom: 100rpx;
+  margin-bottom: 80rpx;
 }
 
 .logo {
@@ -188,19 +239,51 @@ export default {
 .form-section {
   background-color: #ffffff;
   border-radius: 20rpx;
-  padding: 60rpx 40rpx;
+  padding: 40rpx 40rpx 60rpx;
   box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.1);
 }
 
-.form-item {
+/* Tab */
+.login-tabs {
+  display: flex;
   margin-bottom: 40rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  color: #999999;
+  position: relative;
+
+  &.active {
+    color: #667eea;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1rpx;
+      left: 25%;
+      width: 50%;
+      height: 4rpx;
+      background-color: #667eea;
+      border-radius: 2rpx;
+    }
+  }
+}
+
+.form-item {
+  margin-bottom: 36rpx;
 }
 
 .label {
   display: block;
   font-size: 28rpx;
   color: #333333;
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
   font-weight: 500;
 }
 
@@ -210,17 +293,39 @@ export default {
   height: 88rpx;
 }
 
-.form-item ::v-deep .uni-easyinput__content-input {
-  font-size: 28rpx;
-  color: #333333;
-  height: 88rpx;
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
 }
 
-/* 移除原生 input 样式，已被 uni-easyinput 替代 */
+.code-input {
+  flex: 1;
+}
+
+.send-code-btn {
+  flex-shrink: 0;
+  padding: 0 28rpx;
+  height: 80rpx;
+  background-color: #667eea;
+  border-radius: 10rpx;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+
+  text {
+    font-size: 24rpx;
+    color: #ffffff;
+  }
+
+  &.disabled {
+    background-color: #cccccc;
+  }
+}
 
 .error-tip {
-  margin-bottom: 30rpx;
-  padding: 20rpx;
+  margin-bottom: 24rpx;
+  padding: 16rpx 20rpx;
   background-color: #fff1f0;
   border-radius: 8rpx;
   border-left: 4rpx solid #ff4d4f;
@@ -240,16 +345,13 @@ export default {
   color: #ffffff;
   font-weight: bold;
   border: none;
-  margin-top: 20rpx;
 }
 
-.login-btn::after {
-  border: none;
-}
+.login-btn::after { border: none; }
 
 .register-link {
   text-align: center;
-  margin-top: 40rpx;
+  margin-top: 36rpx;
 }
 
 .link-text {

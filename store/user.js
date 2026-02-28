@@ -35,7 +35,7 @@ export const useUserStore = defineStore('user', {
     /**
      * 获取用户 ID
      */
-    userId: (state) => state.userInfo?.id || null
+    userId: (state) => state.userInfo?.user?.id || null
   },
 
   actions: {
