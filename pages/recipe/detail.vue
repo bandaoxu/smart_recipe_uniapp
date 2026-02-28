@@ -23,7 +23,8 @@
       </view>
 
       <view class="author-info">
-        <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
+        <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"
+          @click="goToUserProfile(recipe.author?.id)"></image>
         <text class="author-name">{{ recipe.author?.nickname || '匿名' }}</text>
       </view>
 
@@ -167,6 +168,19 @@ export default {
   methods: {
     formatDifficulty,
     formatCookingTime,
+
+    /**
+     * 跳转到用户主页
+     */
+    goToUserProfile(userId) {
+      if (!userId) return
+      const userStore = useUserStore()
+      if (userId === userStore.userId) {
+        uni.switchTab({ url: '/pages/user/profile' })
+      } else {
+        uni.navigateTo({ url: `/pages/user/other-profile?id=${userId}` })
+      }
+    },
 
     /**
      * 加载数据

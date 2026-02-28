@@ -16,7 +16,10 @@
 export function formatTime(time, format = 'YYYY-MM-DD HH:mm:ss') {
   if (!time) return ''
 
-  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  let normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  if (typeof normalized === 'string' && !normalized.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(normalized)) {
+    normalized = normalized + 'Z'
+  }
   const date = new Date(normalized)
   if (isNaN(date.getTime())) return ''
 
@@ -44,7 +47,11 @@ export function formatTime(time, format = 'YYYY-MM-DD HH:mm:ss') {
 export function formatRelativeTime(time) {
   if (!time) return ''
 
-  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  let normalized = typeof time === 'string' ? time.replace(' ', 'T') : time
+  // 若无时区信息则追加 'Z'，强制视为 UTC 与后端保持一致
+  if (typeof normalized === 'string' && !normalized.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(normalized)) {
+    normalized = normalized + 'Z'
+  }
   const date = new Date(normalized)
   if (isNaN(date.getTime())) return ''
 

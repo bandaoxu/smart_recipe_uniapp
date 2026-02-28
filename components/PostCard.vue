@@ -2,8 +2,9 @@
   <view class="post-card" @click="goToDetail">
     <!-- 用户信息 -->
     <view class="post-header">
-      <image class="avatar" :src="post.user?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
-      <view class="user-info">
+      <image class="avatar" :src="post.user?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"
+        @click.stop="goToUserProfile(post.user?.id)"></image>
+      <view class="user-info" @click.stop="goToUserProfile(post.user?.id)">
         <text class="username">{{ post.user?.nickname || '匿名' }}</text>
         <text class="time">{{ formatRelativeTime(post.created_at) }}</text>
       </view>
@@ -62,6 +63,7 @@
 
 import { formatRelativeTime, formatLargeNumber } from '@/utils/format'
 import { likePost } from '@/api/community'
+import { useUserStore } from '@/store'
 
 export default {
   name: 'PostCard',
@@ -82,6 +84,19 @@ export default {
       uni.navigateTo({
         url: `/pages/community/detail?id=${this.post.id}`
       })
+    },
+
+    /**
+     * 跳转到用户主页
+     */
+    goToUserProfile(userId) {
+      if (!userId) return
+      const userStore = useUserStore()
+      if (userId === userStore.userId) {
+        uni.switchTab({ url: '/pages/user/profile' })
+      } else {
+        uni.navigateTo({ url: `/pages/user/other-profile?id=${userId}` })
+      }
     },
 
     /**

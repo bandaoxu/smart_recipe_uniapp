@@ -102,3 +102,47 @@ export const changePassword = (data) => {
     data
   })
 }
+
+/**
+ * 关注用户
+ * @param {Number} userId - 目标用户 ID
+ */
+export const followUser = (userId) => {
+  return request({
+    url: `/user/${userId}/follow/`,
+    method: 'POST'
+  })
+}
+
+/**
+ * 取消关注用户
+ * @param {Number} userId - 目标用户 ID
+ */
+export const unfollowUser = (userId) => {
+  return request({
+    url: `/user/${userId}/follow/`,
+    method: 'DELETE'
+  })
+}
+
+/**
+ * 获取我的关注列表
+ */
+export const getFollowing = () => {
+  return request({
+    url: '/user/following/',
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取他人公开档案
+ * @param {Number} userId - 目标用户 ID
+ */
+export const getPublicProfile = (userId) => {
+  return request({
+    url: `/user/${userId}/`,
+    method: 'GET',
+    needAuth: false
+  })
+}

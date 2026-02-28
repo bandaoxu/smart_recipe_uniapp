@@ -1,9 +1,42 @@
 <template>
   <view class="index-container">
-    <!-- 搜索栏 -->
-    <view class="search-bar" @click="goToSearch">
-      <text class="search-icon">🔍</text>
-      <text class="search-placeholder">搜索食谱、食材</text>
+    <!-- 搜索栏 + 相机入口 -->
+    <view class="search-area">
+      <view class="search-bar" @click="goToSearch">
+        <text class="search-icon">🔍</text>
+        <text class="search-placeholder">搜索食谱、食材</text>
+      </view>
+      <view class="camera-btn" @click="goToRecognize">
+        <text class="camera-icon">📷</text>
+      </view>
+    </view>
+
+    <!-- 热门推荐 -->
+    <view class="hot-section" v-if="hotRecipes.length > 0">
+      <view class="section-header">
+        <text class="section-title">🔥 热门推荐</text>
+        <text class="section-more" @click="clearCategoryAndRefresh">更多</text>
+      </view>
+      <scroll-view class="hot-scroll" scroll-x>
+        <view class="hot-list">
+          <view
+            class="hot-card"
+            v-for="r in hotRecipes"
+            :key="r.id"
+            @click="goToDetail(r.id)"
+          >
+            <image
+              class="hot-cover"
+              :src="r.cover_image || '/static/images/default-recipe.png'"
+              mode="aspectFill"
+            />
+            <view class="hot-info">
+              <text class="hot-name">{{ r.name }}</text>
+              <text class="hot-meta">{{ r.views || 0 }} 次浏览</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 分类导航 -->
@@ -40,19 +73,9 @@
 </template>
 
 <script>
-/**
- * index.vue - 首页（推荐食谱）
- *
- * 功能：
- * 1. 推荐食谱列表
- * 2. 分类导航
- * 3. 搜索入口
- * 4. 下拉刷新、上拉加载更多
- */
-
 import RecipeCard from '@/components/RecipeCard.vue'
 import LoadingMore from '@/components/LoadingMore.vue'
-import { getRecipeList } from '@/api/recipe'
+import { getRecipeList, getHotRecipes } from '@/api/recipe'
 
 export default {
   name: 'Index',
@@ -63,6 +86,7 @@ export default {
   data() {
     return {
       recipes: [],
+      hotRecipes: [],
       loading: false,
       page: 1,
       hasMore: true,
@@ -79,12 +103,13 @@ export default {
     }
   },
   onLoad() {
+    this.loadHotRecipes()
     this.loadData()
   },
   onPullDownRefresh() {
     this.page = 1
     this.hasMore = true
-    this.loadData().then(() => {
+    Promise.all([this.loadHotRecipes(), this.loadData()]).then(() => {
       uni.stopPullDownRefresh()
     })
   },
@@ -95,48 +120,38 @@ export default {
     }
   },
   methods: {
-    /**
-     * 加载数据
-     */
+    async loadHotRecipes() {
+      try {
+        const res = await getHotRecipes(6)
+        this.hotRecipes = Array.isArray(res.data) ? res.data : (res.data.results || [])
+      } catch (error) {
+        console.error('热门食谱加载失败:', error)
+      }
+    },
+
     async loadData() {
       if (this.loading) return
-
       this.loading = true
-
       try {
-        const params = {
-          page: this.page
-        }
-
-        // 添加分类筛选
+        const params = { page: this.page }
         if (this.currentCategory) {
           params.category = this.currentCategory
         }
-
         const res = await getRecipeList(params)
-
         if (this.page === 1) {
           this.recipes = res.data.results || []
         } else {
           this.recipes = [...this.recipes, ...(res.data.results || [])]
         }
-
         this.hasMore = res.data.next !== null
-
       } catch (error) {
         console.error('加载失败:', error)
-        uni.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+        uni.showToast({ title: '加载失败', icon: 'none' })
       } finally {
         this.loading = false
       }
     },
 
-    /**
-     * 选择分类
-     */
     selectCategory(category) {
       this.currentCategory = category
       this.page = 1
@@ -145,13 +160,20 @@ export default {
       this.loadData()
     },
 
-    /**
-     * 跳转到搜索页面
-     */
+    clearCategoryAndRefresh() {
+      this.selectCategory('')
+    },
+
     goToSearch() {
-      uni.navigateTo({
-        url: '/pages/recipe/search'
-      })
+      uni.navigateTo({ url: '/pages/recipe/search' })
+    },
+
+    goToRecognize() {
+      uni.navigateTo({ url: '/pages/ingredient/recognize' })
+    },
+
+    goToDetail(id) {
+      uni.navigateTo({ url: `/pages/recipe/detail?id=${id}` })
     }
   }
 }
@@ -163,9 +185,17 @@ export default {
   background-color: #f5f5f5;
 }
 
+/* 搜索栏 + 相机按钮 */
+.search-area {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 20rpx 0;
+  gap: 16rpx;
+}
+
 .search-bar {
+  flex: 1;
   background-color: #ffffff;
-  margin: 20rpx;
   padding: 20rpx 30rpx;
   border-radius: 50rpx;
   display: flex;
@@ -183,10 +213,96 @@ export default {
   color: #999999;
 }
 
+.camera-btn {
+  width: 80rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.camera-icon {
+  font-size: 36rpx;
+}
+
+/* 热门推荐 */
+.hot-section {
+  margin: 20rpx 0 0;
+  background-color: #ffffff;
+  padding: 20rpx 20rpx 10rpx;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.section-more {
+  font-size: 24rpx;
+  color: #667eea;
+}
+
+.hot-scroll {
+  width: 100%;
+}
+
+.hot-list {
+  display: flex;
+  gap: 20rpx;
+  padding-bottom: 10rpx;
+  width: max-content;
+}
+
+.hot-card {
+  width: 220rpx;
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.hot-cover {
+  width: 220rpx;
+  height: 160rpx;
+}
+
+.hot-info {
+  padding: 12rpx 14rpx;
+}
+
+.hot-name {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hot-meta {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+/* 分类导航 */
 .category-nav {
   background-color: #ffffff;
   padding: 20rpx 0;
   white-space: nowrap;
+  margin-top: 20rpx;
   margin-bottom: 20rpx;
 }
 
@@ -211,6 +327,7 @@ export default {
   color: #666666;
 }
 
+/* 食谱列表 */
 .recipe-list {
   padding: 0 20rpx 20rpx;
 }
@@ -229,13 +346,6 @@ export default {
 }
 
 .empty-text {
-  font-size: 28rpx;
-  color: #999999;
-}
-
-.loading {
-  text-align: center;
-  padding: 40rpx 0;
   font-size: 28rpx;
   color: #999999;
 }

@@ -95,3 +95,16 @@ export const calculateNutrition = (data) => {
     needAuth: false
   })
 }
+
+/**
+ * 基于食材名称列表推荐食谱
+ * @param {Array} ingredients - 食材名称数组，如 ['西红柿', '鸡蛋']
+ */
+export const recommendByIngredients = (ingredients) => {
+  return request({
+    url: '/ingredient/recommend/',
+    method: 'POST',
+    data: { ingredients },
+    needAuth: false
+  })
+}

@@ -5,10 +5,15 @@
       <view class="post-content">
         <!-- 作者信息 -->
         <view class="author-info">
-          <image :src="post.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" class="author-avatar"></image>
+          <image :src="post.user?.avatar || post.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" class="author-avatar"
+            @click="goToUserProfile(post.user?.id)"></image>
           <view class="author-detail">
-            <text class="author-name">{{ post.author?.nickname }}</text>
+            <text class="author-name">{{ post.user?.nickname || post.author?.nickname }}</text>
             <text class="post-time">{{ formatTime(post.created_at) }}</text>
+          </view>
+          <!-- 关注按钮（非本人才显示） -->
+          <view v-if="!isOwnPost" class="follow-btn" :class="{ followed: isFollowing }" @click="handleFollow">
+            <text>{{ isFollowing ? '已关注' : '+ 关注' }}</text>
           </view>
         </view>
 
@@ -117,6 +122,8 @@
 
 import CommentList from '@/components/CommentList.vue'
 import { getPostDetail, likePost, getComments, createComment } from '@/api/community'
+import { followUser, unfollowUser } from '@/api/user'
+import { useUserStore } from '@/store'
 import { formatTime } from '@/utils/format'
 
 export default {
@@ -133,7 +140,10 @@ export default {
       showModal: false,
       commentContent: '',
       submitting: false,
-      replyingTo: null
+      replyingTo: null,
+      isFollowing: false,
+      isOwnPost: false,
+      followLoading: false
     }
   },
   onLoad(options) {
@@ -144,6 +154,19 @@ export default {
   },
   methods: {
     /**
+     * 跳转到用户主页
+     */
+    goToUserProfile(userId) {
+      if (!userId) return
+      const userStore = useUserStore()
+      if (userId === userStore.userId) {
+        uni.switchTab({ url: '/pages/user/profile' })
+      } else {
+        uni.navigateTo({ url: `/pages/user/other-profile?id=${userId}` })
+      }
+    },
+
+    /**
      * 加载数据
      */
     async loadData() {
@@ -153,6 +176,12 @@ export default {
         // 加载动态详情
         const postRes = await getPostDetail(this.postId)
         this.post = postRes.data
+
+        // 初始化关注状态（后端返回 author.is_following）
+        const userStore = useUserStore()
+        const authorId = this.post.user?.id || this.post.author?.id
+        this.isOwnPost = userStore.isLoggedIn && (userStore.userInfo?.id === authorId)
+        this.isFollowing = this.post.user?.is_following || false
 
         // 加载评论列表
         const commentsRes = await getComments(this.postId)
@@ -209,6 +238,30 @@ export default {
           title: '操作失败',
           icon: 'none'
         })
+      }
+    },
+
+    /**
+     * 关注/取消关注作者
+     */
+    async handleFollow() {
+      if (this.followLoading) return
+      this.followLoading = true
+      try {
+        const authorId = this.post.user?.id
+        if (this.isFollowing) {
+          await unfollowUser(authorId)
+          this.isFollowing = false
+          uni.showToast({ title: '已取消关注', icon: 'none' })
+        } else {
+          await followUser(authorId)
+          this.isFollowing = true
+          uni.showToast({ title: '关注成功', icon: 'success' })
+        }
+      } catch (error) {
+        console.error('操作失败:', error)
+      } finally {
+        this.followLoading = false
       }
     },
 
@@ -566,6 +619,27 @@ export default {
 
 .cancel-reply {
   font-size: 24rpx;
+  color: #999999;
+}
+
+.follow-btn {
+  padding: 12rpx 32rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid #667eea;
+  background-color: #ffffff;
+}
+
+.follow-btn text {
+  font-size: 26rpx;
+  color: #667eea;
+}
+
+.follow-btn.followed {
+  background-color: #f5f5f5;
+  border-color: #cccccc;
+}
+
+.follow-btn.followed text {
   color: #999999;
 }
 </style>

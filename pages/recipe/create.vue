@@ -194,8 +194,11 @@ export default {
         servings: null,
         category: '',
         cuisine_type: '',
+        tags: [], // 添加tags字段
+        total_calories: 0, // 添加total_calories字段
+        is_published: true, // 添加is_published字段
         ingredients: [
-          { name: '', quantity: '', unit: '' }
+          { name: '', quantity: '', unit: '', is_main: false }
         ],
         steps: [
           { step_number: 1, description: '', image_url: '', tips: '' }
@@ -440,7 +443,12 @@ export default {
         })
 
         setTimeout(() => {
-          uni.navigateBack()
+          const pages = getCurrentPages()
+          if (pages.length > 1) {
+            uni.navigateBack()
+          } else {
+            uni.switchTab({ url: '/pages/user/profile' })
+          }
         }, 1500)
 
       } catch (error) {

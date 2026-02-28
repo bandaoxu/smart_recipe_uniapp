@@ -99,11 +99,14 @@ export const favoriteRecipe = (id) => {
 
 /**
  * 获取我的食谱
+ * @param {Object} params - 查询参数（可选）
+ * @param {Number} params.page - 页码
  */
-export const getMyRecipes = () => {
+export const getMyRecipes = (params) => {
   return request({
     url: '/recipe/my-recipes/',
-    method: 'GET'
+    method: 'GET',
+    data: params
   })
 }
 
@@ -168,5 +171,32 @@ export const createRecipeComment = (id, data) => {
     url: `/community/posts/${id}/comments/`,
     method: 'POST',
     data
+  })
+}
+
+/**
+ * 获取指定用户的食谱列表（用于他人主页）
+ * @param {Number} userId - 用户 ID
+ * @param {Object} params - 额外查询参数
+ */
+export const getUserRecipes = (userId, params = {}) => {
+  return request({
+    url: '/recipe/',
+    method: 'GET',
+    data: { author: userId, ...params },
+    needAuth: false
+  })
+}
+
+/**
+ * 获取热门食谱
+ * @param {Number} limit - 返回数量（默认 10）
+ */
+export const getHotRecipes = (limit = 10) => {
+  return request({
+    url: '/recipe/hot/',
+    method: 'GET',
+    data: { limit },
+    needAuth: false
   })
 }

@@ -35,6 +35,22 @@
         <text class="menu-arrow">›</text>
       </view>
 
+      <view class="menu-item" @click="goToFollowing">
+        <view class="menu-left">
+          <text class="menu-icon">👥</text>
+          <text class="menu-text">我的关注</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
+      <view class="menu-item" @click="goToDiary">
+        <view class="menu-left">
+          <text class="menu-icon">📊</text>
+          <text class="menu-text">营养日记</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
       <view class="menu-item" @click="editProfile">
         <view class="menu-left">
           <text class="menu-icon">✏️</text>
@@ -138,6 +154,21 @@ export default {
     goToLikes() {
       uni.navigateTo({
         url: '/pages/user/my-likes'
+      })
+    },
+
+    /**
+     * 跳转到我的关注
+     */
+    goToFollowing() {
+      uni.navigateTo({
+        url: '/pages/user/following'
+      })
+    },
+
+    goToDiary() {
+      uni.navigateTo({
+        url: '/pages/nutrition/diary'
       })
     },
 

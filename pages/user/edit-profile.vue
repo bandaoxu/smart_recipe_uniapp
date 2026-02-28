@@ -1,20 +1,19 @@
 <template>
   <view class="edit-profile-container">
+    <!-- 头像区域 -->
+    <view class="avatar-section" @click="chooseAvatar">
+      <image
+        class="profile-avatar"
+        :src="form.avatar || '/static/images/default-avatar.svg'"
+        mode="aspectFill"
+      />
+      <view class="avatar-tip">
+        <text>点击修改头像</text>
+      </view>
+    </view>
+
     <!-- 表单区域 -->
     <view class="form-section">
-      <!-- 头像 -->
-      <view class="form-item avatar-row" @click="chooseAvatar">
-        <text class="form-label">头像</text>
-        <view class="avatar-right">
-          <image
-            class="avatar-preview"
-            :src="form.avatar || '/static/images/default-avatar.svg'"
-            mode="aspectFill"
-          />
-          <text class="avatar-arrow">›</text>
-        </view>
-      </view>
-
       <!-- 昵称 -->
       <view class="form-item">
         <text class="form-label">昵称</text>
@@ -82,7 +81,7 @@
 
 import { useUserStore } from '@/store'
 import { getProfile, patchProfile } from '@/api/user'
-import { getToken } from '@/api/request'
+import { getToken } from '@/utils/auth'
 
 export default {
   name: 'EditProfile',
@@ -99,15 +98,15 @@ export default {
       genderOptions: [
         { value: 'male', label: '男' },
         { value: 'female', label: '女' },
-        { value: 'secret', label: '保密' }
+        { value: 'other', label: '其他' }
       ],
-      healthGoalOptions: ['减重', '增肌', '均衡饮食', '健康生活'],
-      healthGoalValues: ['lose_weight', 'gain_muscle', 'balanced_diet', 'healthy_life'],
+      healthGoalOptions: ['减肥', '增肌', '保持健康', '改善营养'],
+      healthGoalValues: ['lose_weight', 'gain_muscle', 'maintain', 'improve_nutrition'],
       healthGoalLabels: {
-        lose_weight: '减重',
+        lose_weight: '减肥',
         gain_muscle: '增肌',
-        balanced_diet: '均衡饮食',
-        healthy_life: '健康生活'
+        maintain: '保持健康',
+        improve_nutrition: '改善营养'
       }
     }
   },
@@ -321,26 +320,25 @@ export default {
   border: none;
 }
 
-.avatar-row {
-  cursor: pointer;
-}
-
-.avatar-right {
+.avatar-section {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  flex: 1;
-  justify-content: flex-end;
+  padding: 60rpx 0 40rpx;
+  background-color: #ffffff;
+  margin-bottom: 20rpx;
 }
 
-.avatar-preview {
-  width: 100rpx;
-  height: 100rpx;
+.profile-avatar {
+  width: 160rpx;
+  height: 160rpx;
   border-radius: 50%;
-  margin-right: 16rpx;
+  border: 4rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
 }
 
-.avatar-arrow {
-  font-size: 40rpx;
-  color: #cccccc;
+.avatar-tip {
+  font-size: 24rpx;
+  color: #667eea;
 }
 </style>

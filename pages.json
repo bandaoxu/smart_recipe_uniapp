@@ -117,6 +117,36 @@
       "style": {
         "navigationBarTitleText": "设置"
       }
+    },
+    {
+      "path": "pages/user/following",
+      "style": {
+        "navigationBarTitleText": "我的关注"
+      }
+    },
+    {
+      "path": "pages/user/other-profile",
+      "style": {
+        "navigationBarTitleText": "个人主页"
+      }
+    },
+    {
+      "path": "pages/nutrition/diary",
+      "style": {
+        "navigationBarTitleText": "营养日记"
+      }
+    },
+    {
+      "path": "pages/nutrition/report",
+      "style": {
+        "navigationBarTitleText": "营养报表"
+      }
+    },
+    {
+      "path": "pages/ingredient/recognize",
+      "style": {
+        "navigationBarTitleText": "食材识别"
+      }
     }
   ],
   "tabBar": {
