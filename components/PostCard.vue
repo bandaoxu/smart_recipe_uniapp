@@ -22,8 +22,9 @@
         :key="index"
         class="post-image"
         :class="{ 'single-image': post.images.length === 1 }"
-        :src="image"
+        :src="imageErrors[index] ? '/static/images/default-recipe.svg' : image"
         mode="aspectFill"
+        @error="onImageError(index)"
         @click.stop="previewImage(index)"
       ></image>
     </view>
@@ -73,6 +74,11 @@ export default {
       required: true
     }
   },
+  data() {
+    return {
+      imageErrors: {}
+    }
+  },
   methods: {
     formatRelativeTime,
     formatLargeNumber,
@@ -108,6 +114,13 @@ export default {
           url: `/pages/recipe/detail?id=${this.post.recipe.id}`
         })
       }
+    },
+
+    /**
+     * 图片加载失败回退
+     */
+    onImageError(index) {
+      this.$set(this.imageErrors, index, true)
     },
 
     /**

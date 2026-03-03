@@ -1,6 +1,14 @@
 <template>
   <view class="recognize-container">
 
+    <!-- 顶部工具栏：历史入口 -->
+    <view class="top-bar">
+      <view class="history-entry" @click="goToHistory">
+        <text class="history-icon">🕐</text>
+        <text class="history-text">识别历史</text>
+      </view>
+    </view>
+
     <!-- 未选图状态：选图入口 -->
     <view class="pick-area" v-if="!previewImage && !loading">
       <view class="pick-header">
@@ -47,18 +55,31 @@
             :class="{ selected: selectedIngredients.includes(item.name) }"
             @click="toggleIngredient(item.name)"
           >
-            <view class="ingredient-left">
-              <view class="ingredient-check">
-                <text v-if="selectedIngredients.includes(item.name)">✓</text>
+            <view class="ingredient-top">
+              <view class="ingredient-left">
+                <view class="ingredient-check">
+                  <text v-if="selectedIngredients.includes(item.name)">✓</text>
+                </view>
+                <text class="ingredient-name">{{ item.name }}</text>
               </view>
-              <text class="ingredient-name">{{ item.name }}</text>
+              <view class="confidence-bar-wrap">
+                <view
+                  class="confidence-bar"
+                  :style="{ width: Math.round(item.confidence * 100) + '%' }"
+                ></view>
+                <text class="confidence-text">{{ Math.round(item.confidence * 100) }}%</text>
+              </view>
             </view>
-            <view class="confidence-bar-wrap">
-              <view
-                class="confidence-bar"
-                :style="{ width: Math.round(item.confidence * 100) + '%' }"
-              ></view>
-              <text class="confidence-text">{{ Math.round(item.confidence * 100) }}%</text>
+            <!-- 营养信息 -->
+            <view class="nutrition-row" v-if="item.nutrition">
+              <text class="nutrition-label">每100g：</text>
+              <text class="nutrition-item">{{ item.nutrition.calories }}kcal</text>
+              <text class="nutrition-divider">·</text>
+              <text class="nutrition-item">蛋白质{{ item.nutrition.protein }}g</text>
+              <text class="nutrition-divider">·</text>
+              <text class="nutrition-item">脂肪{{ item.nutrition.fat }}g</text>
+              <text class="nutrition-divider">·</text>
+              <text class="nutrition-item">碳水{{ item.nutrition.carbohydrate }}g</text>
             </view>
           </view>
         </view>
@@ -118,8 +139,7 @@
 </template>
 
 <script>
-import { recognizeIngredient } from '@/api/ingredient'
-import { recommendByIngredients } from '@/api/ingredient'
+import { recognizeIngredient, recommendByIngredients } from '@/api/ingredient'
 import { getToken } from '@/utils/auth'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
 
@@ -142,6 +162,10 @@ export default {
   methods: {
     formatDifficulty,
     formatCookingTime,
+
+    goToHistory() {
+      uni.navigateTo({ url: '/pages/ingredient/history' })
+    },
 
     chooseImage(sourceType) {
       uni.chooseImage({
@@ -252,6 +276,32 @@ export default {
   min-height: 100vh;
   background-color: #f5f5f5;
   padding-bottom: 60rpx;
+}
+
+/* 顶部历史入口 */
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20rpx 30rpx;
+  background-color: #ffffff;
+}
+
+.history-entry {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  background-color: #f0f4ff;
+  border-radius: 30rpx;
+}
+
+.history-icon {
+  font-size: 28rpx;
+}
+
+.history-text {
+  font-size: 24rpx;
+  color: #667eea;
 }
 
 /* 选图入口 */
@@ -400,9 +450,6 @@ export default {
 }
 
 .ingredient-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 20rpx 24rpx;
   border-radius: 12rpx;
   background-color: #f9f9f9;
@@ -412,6 +459,12 @@ export default {
     background-color: #f0f4ff;
     border-color: #667eea;
   }
+}
+
+.ingredient-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .ingredient-left {
@@ -460,6 +513,32 @@ export default {
   font-size: 22rpx;
   color: #999999;
   white-space: nowrap;
+}
+
+/* 营养信息行 */
+.nutrition-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #eeeeee;
+}
+
+.nutrition-label {
+  font-size: 20rpx;
+  color: #999999;
+}
+
+.nutrition-item {
+  font-size: 20rpx;
+  color: #667eea;
+}
+
+.nutrition-divider {
+  font-size: 20rpx;
+  color: #cccccc;
 }
 
 .recommend-btn {

@@ -149,6 +149,13 @@
       }
     },
     {
+      "path": "pages/ingredient/history",
+      "style": {
+        "navigationBarTitleText": "识别历史",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
       "path": "pages/user/history",
       "style": {
         "navigationBarTitleText": "浏览历史",

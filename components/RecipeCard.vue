@@ -1,7 +1,7 @@
 <template>
   <view class="recipe-card" @click="goToDetail">
     <!-- 封面图 -->
-    <image class="cover-image" :src="recipe.cover_image" mode="aspectFill"></image>
+    <image class="cover-image" :src="coverSrc" mode="aspectFill" @error="coverSrc='/static/images/default-recipe.svg'"></image>
 
     <!-- 食谱信息 -->
     <view class="recipe-info">
@@ -18,7 +18,7 @@
       <view class="recipe-footer">
         <!-- 作者 -->
         <view class="author">
-          <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
+          <image class="avatar" :src="avatarSrc" mode="aspectFill" @error="avatarSrc='/static/images/default-avatar.svg'"></image>
           <text class="author-name">{{ recipe.author?.nickname || '匿名' }}</text>
         </view>
 
@@ -59,6 +59,16 @@ export default {
       type: Object,
       required: true
     }
+  },
+  data() {
+    return {
+      coverSrc: '',
+      avatarSrc: ''
+    }
+  },
+  created() {
+    this.coverSrc = this.recipe.cover_image || '/static/images/default-recipe.svg'
+    this.avatarSrc = this.recipe.author?.avatar || '/static/images/default-avatar.svg'
   },
   methods: {
     formatDifficulty,

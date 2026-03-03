@@ -97,6 +97,17 @@ export const calculateNutrition = (data) => {
 }
 
 /**
+ * 获取食材识别历史记录
+ */
+export const getRecognitionHistory = (params = {}) => {
+  return request({
+    url: '/ingredient/history/',
+    method: 'GET',
+    params
+  })
+}
+
+/**
  * 基于食材名称列表推荐食谱
  * @param {Array} ingredients - 食材名称数组，如 ['西红柿', '鸡蛋']
  */
