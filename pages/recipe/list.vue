@@ -1,45 +1,90 @@
 <template>
   <view class="recipe-list-container">
+
     <!-- 筛选栏 -->
-    <view class="filter-bar">
-      <!-- 分类筛选 -->
-      <view class="filter-item">
-        <uni-data-picker
-          v-model="currentCategory"
-          :localdata="categories"
-          placeholder="分类"
-          @change="onCategoryChange"
-        />
+    <view class="filter-wrap">
+
+      <!-- 主筛选栏：分类 + 筛选按钮 -->
+      <view class="main-filter-bar">
+        <view class="category-scroll-wrap">
+          <scroll-view scroll-x class="category-scroll" :show-scrollbar="false">
+            <view class="category-inner">
+              <view
+                v-for="c in categories"
+                :key="c.value"
+                :class="['cat-tag', currentCategory === c.value ? 'active' : '']"
+                @click="selectCategory(c.value)"
+              >{{ c.text }}</view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view class="filter-toggle-btn" @click="toggleAdvanced">
+          <text class="filter-btn-text">筛选</text>
+          <view v-if="activeAdvancedCount > 0" class="filter-badge">{{ activeAdvancedCount }}</view>
+          <text class="filter-arrow" :class="showAdvancedFilter ? 'arrow-up' : ''">▾</text>
+        </view>
       </view>
 
-      <!-- 难度筛选 -->
-      <view class="filter-item">
-        <uni-data-picker
-          v-model="currentDifficulty"
-          :localdata="difficulties"
-          placeholder="难度"
-          @change="onDifficultyChange"
-        />
-      </view>
+      <!-- 高级筛选面板 -->
+      <view v-show="showAdvancedFilter" class="advanced-panel">
 
-      <!-- 菜系筛选 -->
-      <view class="filter-item">
-        <uni-data-picker
-          v-model="currentCuisine"
-          :localdata="cuisines"
-          placeholder="菜系"
-          @change="onCuisineChange"
-        />
-      </view>
+        <!-- 难度 -->
+        <view class="filter-row">
+          <text class="row-label">难度</text>
+          <view class="tags-scroll-wrap">
+            <scroll-view scroll-x class="tags-scroll" :show-scrollbar="false">
+              <view class="tags-inner">
+                <view
+                  v-for="d in difficulties"
+                  :key="d.value"
+                  :class="['option-tag', currentDifficulty === d.value ? 'active' : '']"
+                  @click="selectDifficulty(d.value)"
+                >{{ d.text }}</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
 
-      <!-- 排序 -->
-      <view class="filter-item">
-        <uni-data-picker
-          v-model="currentSort"
-          :localdata="sortOptions"
-          placeholder="排序"
-          @change="onSortChange"
-        />
+        <!-- 菜系 -->
+        <view class="filter-row">
+          <text class="row-label">菜系</text>
+          <view class="tags-scroll-wrap">
+            <scroll-view scroll-x class="tags-scroll" :show-scrollbar="false">
+              <view class="tags-inner">
+                <view
+                  v-for="cu in cuisines"
+                  :key="cu.value"
+                  :class="['option-tag', currentCuisine === cu.value ? 'active' : '']"
+                  @click="selectCuisine(cu.value)"
+                >{{ cu.text }}</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+
+        <!-- 排序 -->
+        <view class="filter-row">
+          <text class="row-label">排序</text>
+          <view class="tags-scroll-wrap">
+            <scroll-view scroll-x class="tags-scroll" :show-scrollbar="false">
+              <view class="tags-inner">
+                <view
+                  v-for="s in sortOptions"
+                  :key="s.value"
+                  :class="['option-tag', currentSort === s.value ? 'active' : '']"
+                  @click="selectSort(s.value)"
+                >{{ s.text }}</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+
+        <!-- 底部重置 -->
+        <view class="panel-footer">
+          <view class="reset-btn" @click="resetAdvanced">重置筛选</view>
+        </view>
+
       </view>
     </view>
 
@@ -60,32 +105,18 @@
 
     <!-- 加载更多 -->
     <LoadingMore :loading="loading" :hasMore="hasMore" />
+
   </view>
 </template>
 
 <script>
-/**
- * list.vue - 食谱列表页面
- *
- * 功能：
- * 1. 显示食谱列表
- * 2. 分类筛选（早餐、午餐、晚餐等）
- * 3. 难度筛选（简单、中等、困难）
- * 4. 菜系筛选（中餐、粤菜、川菜等）
- * 5. 排序（最新、最热、最多收藏）
- * 6. 下拉刷新、上拉加载更多
- */
-
 import RecipeCard from '@/components/RecipeCard.vue'
 import LoadingMore from '@/components/LoadingMore.vue'
 import { getRecipeList } from '@/api/recipe'
 
 export default {
   name: 'RecipeList',
-  components: {
-    RecipeCard,
-    LoadingMore
-  },
+  components: { RecipeCard, LoadingMore },
   data() {
     return {
       recipes: [],
@@ -93,9 +124,10 @@ export default {
       page: 1,
       hasMore: true,
 
-      // 分类选项
+      showAdvancedFilter: false,
+
       categories: [
-        { text: '全部分类', value: '' },
+        { text: '全部', value: '' },
         { text: '早餐', value: 'breakfast' },
         { text: '午餐', value: 'lunch' },
         { text: '晚餐', value: 'dinner' },
@@ -105,18 +137,16 @@ export default {
       ],
       currentCategory: '',
 
-      // 难度选项
       difficulties: [
-        { text: '全部难度', value: '' },
+        { text: '全部', value: '' },
         { text: '简单', value: 'easy' },
         { text: '中等', value: 'medium' },
         { text: '困难', value: 'hard' }
       ],
       currentDifficulty: '',
 
-      // 菜系选项
       cuisines: [
-        { text: '全部菜系', value: '' },
+        { text: '全部', value: '' },
         { text: '中餐', value: 'chinese' },
         { text: '粤菜', value: 'cantonese' },
         { text: '川菜', value: 'sichuan' },
@@ -128,7 +158,6 @@ export default {
       ],
       currentCuisine: '',
 
-      // 排序选项
       sortOptions: [
         { text: '最新', value: '-created_at' },
         { text: '最热', value: '-likes' },
@@ -138,7 +167,13 @@ export default {
     }
   },
   computed: {
-    // 移除 computed 属性，uni-data-picker 直接使用 v-model
+    activeAdvancedCount() {
+      let count = 0
+      if (this.currentDifficulty) count++
+      if (this.currentCuisine) count++
+      if (this.currentSort !== '-created_at') count++
+      return count
+    }
   },
   onLoad() {
     this.loadData()
@@ -146,9 +181,7 @@ export default {
   onPullDownRefresh() {
     this.page = 1
     this.hasMore = true
-    this.loadData().then(() => {
-      uni.stopPullDownRefresh()
-    })
+    this.loadData().then(() => uni.stopPullDownRefresh())
   },
   onReachBottom() {
     if (this.hasMore && !this.loading) {
@@ -157,86 +190,61 @@ export default {
     }
   },
   methods: {
-    /**
-     * 加载数据
-     */
+    toggleAdvanced() {
+      this.showAdvancedFilter = !this.showAdvancedFilter
+    },
+
+    selectCategory(value) {
+      this.currentCategory = value
+      this.reload()
+    },
+    selectDifficulty(value) {
+      this.currentDifficulty = value
+      this.reload()
+    },
+    selectCuisine(value) {
+      this.currentCuisine = value
+      this.reload()
+    },
+    selectSort(value) {
+      this.currentSort = value
+      this.reload()
+    },
+    resetAdvanced() {
+      this.currentDifficulty = ''
+      this.currentCuisine = ''
+      this.currentSort = '-created_at'
+      this.reload()
+    },
+
+    reload() {
+      this.page = 1
+      this.hasMore = true
+      this.loadData()
+    },
+
     async loadData() {
       if (this.loading) return
-
       this.loading = true
-
       try {
-        const params = {
-          page: this.page,
-          ordering: this.currentSort
-        }
-
-        // 添加筛选条件
-        if (this.currentCategory) {
-          params.category = this.currentCategory
-        }
-        if (this.currentDifficulty) {
-          params.difficulty = this.currentDifficulty
-        }
-        if (this.currentCuisine) {
-          params.cuisine = this.currentCuisine
-        }
+        const params = { page: this.page, ordering: this.currentSort }
+        if (this.currentCategory) params.category = this.currentCategory
+        if (this.currentDifficulty) params.difficulty = this.currentDifficulty
+        if (this.currentCuisine) params.cuisine_type = this.currentCuisine
 
         const res = await getRecipeList(params)
-
         if (this.page === 1) {
           this.recipes = res.data.results || []
         } else {
           this.recipes = [...this.recipes, ...(res.data.results || [])]
         }
-
         this.hasMore = res.data.next !== null
-
       } catch (error) {
         console.error('加载失败:', error)
-        uni.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+        uni.showToast({ title: '加载失败', icon: 'none' })
       } finally {
         this.loading = false
       }
-    },
-
-    /**
-     * 分类筛选变化
-     */
-    onCategoryChange() {
-      this.page = 1
-      this.hasMore = true
-      this.loadData()
-    },
-
-    /**
-     * 难度筛选变化
-     */
-    onDifficultyChange() {
-      this.page = 1
-      this.hasMore = true
-      this.loadData()
-    },
-
-    /**
-     * 菜系筛选变化
-     */
-    onCuisineChange() {
-      this.page = 1
-      this.hasMore = true
-      this.loadData()
-    },
-
-    /**
-     * 排序变化
-     */
-    onSortChange() {
-      this.page = 1
-      this.hasMore = true
-      this.loadData()
     }
   }
 }
@@ -248,29 +256,183 @@ export default {
   background-color: #f5f5f5;
 }
 
-.filter-bar {
-  display: flex;
-  background-color: #ffffff;
-  padding: 20rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+/* ── 筛选栏整体容器 ─────────────────────────────────────── */
+.filter-wrap {
   position: sticky;
   top: 0;
   z-index: 100;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
 }
 
-.filter-item {
+/* ── 主筛选栏 ────────────────────────────────────────────── */
+.main-filter-bar {
+  display: flex;
+  align-items: center;
+  height: 88rpx;
+  padding: 0 24rpx 0 16rpx;
+}
+
+.category-scroll-wrap {
   flex: 1;
-  margin: 0 10rpx;
+  min-width: 0;
+  overflow: hidden;
+  height: 88rpx;
 }
 
-.filter-item ::v-deep .uni-data-picker {
+.category-scroll {
+  width: 100%;
+  height: 88rpx;
+  white-space: nowrap;
+}
+
+.category-inner {
+  display: inline-flex;
+  align-items: center;
+  height: 88rpx;
+  padding-right: 16rpx;
+}
+
+.cat-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 24rpx;
+  margin-right: 12rpx;
+  border-radius: 26rpx;
+  font-size: 26rpx;
+  color: #666666;
   background-color: #f5f5f5;
-  border-radius: 8rpx;
-  height: 60rpx;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &.active {
+    background-color: #667eea;
+    color: #ffffff;
+    font-weight: 500;
+  }
 }
 
-/* 移除原生 picker 样式，已被 uni-data-picker 替代 */
+/* 筛选按钮 */
+.filter-toggle-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 20rpx;
+  margin-left: 8rpx;
+  border-radius: 26rpx;
+  border: 2rpx solid #667eea;
+  position: relative;
+}
 
+.filter-btn-text {
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.filter-badge {
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 16rpx;
+  background-color: #ff4757;
+  color: #ffffff;
+  font-size: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6rpx;
+}
+
+.filter-arrow {
+  font-size: 22rpx;
+  color: #667eea;
+  margin-left: 4rpx;
+  display: inline-block;
+  transition: transform 0.25s;
+
+  &.arrow-up {
+    transform: rotate(180deg);
+  }
+}
+
+/* ── 高级筛选面板 ─────────────────────────────────────────── */
+.advanced-panel {
+  border-top: 2rpx solid #f0f0f0;
+  padding: 16rpx 24rpx 8rpx;
+  background-color: #ffffff;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  min-height: 72rpx;
+  margin-bottom: 8rpx;
+}
+
+.row-label {
+  flex-shrink: 0;
+  width: 72rpx;
+  font-size: 24rpx;
+  color: #999999;
+  margin-right: 12rpx;
+}
+
+.tags-scroll-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tags-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.tags-inner {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 0;
+}
+
+.option-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 24rpx;
+  margin-right: 12rpx;
+  border-radius: 26rpx;
+  font-size: 24rpx;
+  color: #666666;
+  background-color: #f5f5f5;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &.active {
+    background-color: #667eea;
+    color: #ffffff;
+    font-weight: 500;
+  }
+}
+
+/* 底部重置 */
+.panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8rpx 0 12rpx;
+  border-top: 2rpx solid #f5f5f5;
+  margin-top: 8rpx;
+}
+
+.reset-btn {
+  font-size: 24rpx;
+  color: #999999;
+  padding: 8rpx 16rpx;
+}
+
+/* ── 列表区域 ─────────────────────────────────────────────── */
 .recipe-list {
   padding: 20rpx;
 }
@@ -289,13 +451,6 @@ export default {
 }
 
 .empty-text {
-  font-size: 28rpx;
-  color: #999999;
-}
-
-.loading {
-  text-align: center;
-  padding: 40rpx 0;
   font-size: 28rpx;
   color: #999999;
 }

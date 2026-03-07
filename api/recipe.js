@@ -196,7 +196,7 @@ export const getHotRecipes = (limit = 10) => {
   return request({
     url: '/recipe/hot/',
     method: 'GET',
-    data: { limit },
+    params: { limit },
     needAuth: false
   })
 }
