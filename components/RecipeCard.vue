@@ -14,6 +14,14 @@
         <text class="tag">{{ formatCookingTime(recipe.cooking_time) }}</text>
       </view>
 
+      <!-- 营养摘要行 -->
+      <view class="nutrition-row" v-if="recipe.total_calories > 0 || recipe.total_protein > 0">
+        <view class="nut-cell" v-for="item in nutritionSummary" :key="item.label">
+          <text class="nut-val">{{ item.value }}</text>
+          <text class="nut-lbl">{{ item.label }}</text>
+        </view>
+      </view>
+
       <!-- 底部信息 -->
       <view class="recipe-footer">
         <!-- 作者 -->
@@ -64,6 +72,17 @@ export default {
     return {
       coverSrc: '',
       avatarSrc: ''
+    }
+  },
+  computed: {
+    nutritionSummary() {
+      const r = this.recipe
+      return [
+        { label: '千卡', value: r.total_calories ?? 0 },
+        { label: '蛋白质g', value: r.total_protein ?? 0 },
+        { label: '脂肪g', value: r.total_fat ?? 0 },
+        { label: '碳水g', value: r.total_carbohydrate ?? 0 }
+      ]
     }
   },
   created() {
@@ -120,7 +139,7 @@ export default {
 .recipe-tags {
   display: flex;
   gap: 10rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 14rpx;
 }
 
 .tag {
@@ -129,6 +148,39 @@ export default {
   background-color: #f5f5f5;
   padding: 4rpx 12rpx;
   border-radius: 4rpx;
+}
+
+.nutrition-row {
+  display: flex;
+  background-color: #fff8f0;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+}
+
+.nut-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10rpx 0;
+  border-right: 1rpx solid #f0ebe4;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.nut-val {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.nut-lbl {
+  font-size: 18rpx;
+  color: #aaaaaa;
+  margin-top: 2rpx;
 }
 
 .recipe-footer {

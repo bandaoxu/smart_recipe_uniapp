@@ -63,12 +63,16 @@
     </view>
 
     <!-- 营养信息 -->
-    <view class="section" v-if="recipe.total_calories">
+    <view class="section" v-if="hasNutrition">
       <view class="section-header">
         <text class="section-title">营养信息</text>
+        <text class="nutrition-note">（每份参考值）</text>
       </view>
-      <view class="nutrition-info">
-        <text class="nutrition-text">总卡路里: {{ recipe.total_calories }} kcal</text>
+      <view class="nutrition-grid">
+        <view class="nut-item" v-for="item in nutritionItems" :key="item.label">
+          <text class="nut-value">{{ item.value }}</text>
+          <text class="nut-label">{{ item.label }}</text>
+        </view>
       </view>
     </view>
 
@@ -159,6 +163,20 @@ export default {
       showModal: false,
       submitting: false,
       replyingTo: null
+    }
+  },
+  computed: {
+    hasNutrition() {
+      return (this.recipe.total_calories > 0) || (this.recipe.total_protein > 0) ||
+             (this.recipe.total_fat > 0) || (this.recipe.total_carbohydrate > 0)
+    },
+    nutritionItems() {
+      return [
+        { label: '千卡', value: this.recipe.total_calories ?? 0 },
+        { label: '蛋白质(g)', value: this.recipe.total_protein ?? 0 },
+        { label: '脂肪(g)', value: this.recipe.total_fat ?? 0 },
+        { label: '碳水(g)', value: this.recipe.total_carbohydrate ?? 0 }
+      ]
     }
   },
   onLoad(options) {
@@ -524,15 +542,41 @@ export default {
   border-radius: 8rpx;
 }
 
-.nutrition-info {
-  padding: 20rpx;
-  background-color: #f5f5f5;
-  border-radius: 10rpx;
+.nutrition-note {
+  font-size: 22rpx;
+  color: #bbbbbb;
 }
 
-.nutrition-text {
-  font-size: 28rpx;
+.nutrition-grid {
+  display: flex;
+  background-color: #f5f5f5;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.nut-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 0;
+  border-right: 2rpx solid #e8e8e8;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.nut-value {
+  font-size: 34rpx;
+  font-weight: 700;
   color: #333333;
+  margin-bottom: 6rpx;
+}
+
+.nut-label {
+  font-size: 20rpx;
+  color: #999999;
 }
 
 .empty-comments {
