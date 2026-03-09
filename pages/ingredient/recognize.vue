@@ -80,6 +80,10 @@
               <text class="nutrition-item">脂肪{{ item.nutrition.fat }}g</text>
               <text class="nutrition-divider">·</text>
               <text class="nutrition-item">碳水{{ item.nutrition.carbohydrate }}g</text>
+              <template v-if="item.nutrition.fiber > 0">
+                <text class="nutrition-divider">·</text>
+                <text class="nutrition-item">纤维{{ item.nutrition.fiber }}g</text>
+              </template>
             </view>
           </view>
         </view>

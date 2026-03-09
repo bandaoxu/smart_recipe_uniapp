@@ -15,7 +15,7 @@
       </view>
 
       <!-- 营养摘要行 -->
-      <view class="nutrition-row" v-if="recipe.total_calories > 0 || recipe.total_protein > 0">
+      <view class="nutrition-row" v-if="recipe.total_calories > 0 || recipe.total_fiber > 0">
         <view class="nut-cell" v-for="item in nutritionSummary" :key="item.label">
           <text class="nut-val">{{ item.value }}</text>
           <text class="nut-lbl">{{ item.label }}</text>
@@ -78,10 +78,11 @@ export default {
     nutritionSummary() {
       const r = this.recipe
       return [
-        { label: '千卡', value: r.total_calories ?? 0 },
-        { label: '蛋白质g', value: r.total_protein ?? 0 },
-        { label: '脂肪g', value: r.total_fat ?? 0 },
-        { label: '碳水g', value: r.total_carbohydrate ?? 0 }
+        { label: '千卡',  value: r.total_calories     ?? 0 },
+        { label: '蛋白质g', value: r.total_protein       ?? 0 },
+        { label: '脂肪g', value: r.total_fat           ?? 0 },
+        { label: '碳水g', value: r.total_carbohydrate  ?? 0 },
+        { label: '纤维g', value: r.total_fiber         ?? 0 },
       ]
     }
   },

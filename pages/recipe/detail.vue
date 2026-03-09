@@ -167,15 +167,16 @@ export default {
   },
   computed: {
     hasNutrition() {
-      return (this.recipe.total_calories > 0) || (this.recipe.total_protein > 0) ||
-             (this.recipe.total_fat > 0) || (this.recipe.total_carbohydrate > 0)
+      return ['total_calories','total_protein','total_fat','total_carbohydrate','total_fiber']
+        .some(k => (this.recipe[k] || 0) > 0)
     },
     nutritionItems() {
       return [
-        { label: '千卡', value: this.recipe.total_calories ?? 0 },
-        { label: '蛋白质(g)', value: this.recipe.total_protein ?? 0 },
-        { label: '脂肪(g)', value: this.recipe.total_fat ?? 0 },
-        { label: '碳水(g)', value: this.recipe.total_carbohydrate ?? 0 }
+        { label: '千卡',    value: this.recipe.total_calories     ?? 0 },
+        { label: '蛋白质(g)', value: this.recipe.total_protein       ?? 0 },
+        { label: '脂肪(g)', value: this.recipe.total_fat           ?? 0 },
+        { label: '碳水(g)', value: this.recipe.total_carbohydrate  ?? 0 },
+        { label: '纤维(g)', value: this.recipe.total_fiber         ?? 0 },
       ]
     }
   },

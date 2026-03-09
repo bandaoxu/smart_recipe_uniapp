@@ -89,13 +89,51 @@
               <text class="avg-unit">g/天</text>
             </view>
           </view>
+          <view class="avg-item">
+            <view class="avg-left">
+              <view class="avg-dot fiber-dot"></view>
+              <text class="avg-name">膳食纤维</text>
+            </view>
+            <view class="avg-right">
+              <text class="avg-num">{{ averages.fiber }}</text>
+              <text class="avg-unit">g/天</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 三大营养素能量分配 -->
+      <view class="section-card" v-if="hasMacroData">
+        <text class="section-title">三大营养素能量分配</text>
+        <view class="macro-ratio-list">
+          <view class="ratio-item" v-for="item in macroRatioItems" :key="item.label">
+            <view class="ratio-header">
+              <text class="ratio-name">{{ item.label }}</text>
+              <view class="ratio-tag" :class="item.status">{{ item.statusText }}</view>
+              <text class="ratio-pct">{{ item.pct }}%</text>
+            </view>
+            <view class="ratio-bar-bg">
+              <view
+                class="ratio-bar-fill"
+                :class="item.colorClass"
+                :style="{ width: Math.min(item.pct, 100) + '%' }"
+              ></view>
+            </view>
+            <text class="ratio-ref">参考范围 {{ item.ref }}</text>
+          </view>
         </view>
       </view>
 
       <!-- 健康建议 -->
-      <view class="section-card advice-card" v-if="advice">
+      <view class="section-card advice-card" v-if="adviceList.length">
         <text class="section-title">💡 健康建议</text>
-        <text class="advice-text">{{ advice }}</text>
+        <view class="advice-list">
+          <text
+            class="advice-item"
+            v-for="(item, idx) in adviceList"
+            :key="idx"
+          >{{ item }}</text>
+        </view>
       </view>
 
       <!-- 日明细 -->
@@ -115,7 +153,7 @@
               <view class="detail-row">
                 <text class="detail-label">蛋白</text>
                 <view class="detail-bar-bg">
-                  <view class="detail-bar-fill protein-fill" :style="{ width: Math.min(item.protein / 60 * 100, 100) + '%' }"></view>
+                  <view class="detail-bar-fill protein-fill" :style="{ width: Math.min(item.protein / proteinTarget * 100, 100) + '%' }"></view>
                 </view>
                 <text class="detail-val">{{ item.protein }}g</text>
               </view>
@@ -138,9 +176,49 @@ export default {
       period: 'week',
       loading: false,
       chartData: [],
-      averages: { calories: 0, protein: 0, fat: 0, carbohydrate: 0 },
-      advice: '',
+      averages: { calories: 0, protein: 0, fat: 0, carbohydrate: 0, fiber: 0 },
+      macroRatio: { protein_pct: 0, fat_pct: 0, carbohydrate_pct: 0 },
+      adviceList: [],
       targetCalories: 2000
+    }
+  },
+  computed: {
+    hasMacroData() {
+      return this.macroRatio.protein_pct > 0 || this.macroRatio.fat_pct > 0
+    },
+    proteinTarget() {
+      return Math.max(Math.round(this.targetCalories * 0.175 / 4), 1)
+    },
+    macroRatioItems() {
+      const p = this.macroRatio.protein_pct
+      const f = this.macroRatio.fat_pct
+      const c = this.macroRatio.carbohydrate_pct
+      return [
+        {
+          label: '蛋白质',
+          pct: p,
+          ref: '15–20%',
+          colorClass: 'protein-bar',
+          status: p >= 15 && p <= 20 ? 'ok' : 'warn',
+          statusText: p >= 15 && p <= 20 ? '达标' : (p < 15 ? '偏低' : '偏高'),
+        },
+        {
+          label: '脂肪',
+          pct: f,
+          ref: '25–35%',
+          colorClass: 'fat-bar',
+          status: f >= 25 && f <= 35 ? 'ok' : 'warn',
+          statusText: f >= 25 && f <= 35 ? '达标' : (f < 25 ? '偏低' : '偏高'),
+        },
+        {
+          label: '碳水化合物',
+          pct: c,
+          ref: '50–60%',
+          colorClass: 'carb-bar',
+          status: c >= 50 && c <= 60 ? 'ok' : 'warn',
+          statusText: c >= 50 && c <= 60 ? '达标' : (c < 50 ? '偏低' : '偏高'),
+        },
+      ]
     }
   },
   onLoad() {
@@ -163,15 +241,18 @@ export default {
           protein: Math.round(item.protein || 0),
           fat: Math.round(item.fat || 0),
           carbohydrate: Math.round(item.carbohydrate || 0),
+          fiber: Math.round(item.fiber || 0),
           dayLabel: this.getDayLabel(item.date)
         }))
-        const avg = data.averages || {}
+        const avg = data.average || {}
         this.averages = {
-          calories: Math.round(avg.calories || 0),
-          protein: Math.round(avg.protein || 0),
-          fat: Math.round(avg.fat || 0),
-          carbohydrate: Math.round(avg.carbohydrate || 0)
+          calories:     Math.round(avg.calories || 0),
+          protein:      Math.round(avg.protein || 0),
+          fat:          Math.round(avg.fat || 0),
+          carbohydrate: Math.round(avg.carbohydrate || 0),
+          fiber:        Math.round(avg.fiber || 0),
         }
+        this.macroRatio = data.macro_ratio || { protein_pct: 0, fat_pct: 0, carbohydrate_pct: 0 }
       } catch (error) {
         console.error('加载报表失败:', error)
         uni.showToast({ title: '加载失败', icon: 'none' })
@@ -183,7 +264,8 @@ export default {
     async loadAdvice() {
       try {
         const res = await getNutritionAdvice()
-        this.advice = res.data?.advice || ''
+        const advice = res.data?.advice
+        this.adviceList = Array.isArray(advice) ? advice : (advice ? [advice] : [])
       } catch (error) {
         console.error('获取建议失败:', error)
       }
@@ -359,9 +441,10 @@ export default {
   border-radius: 8rpx;
 
   &.calories-dot { background-color: #667eea; }
-  &.protein-dot { background-color: #52c41a; }
-  &.fat-dot { background-color: #faad14; }
-  &.carb-dot { background-color: #1890ff; }
+  &.protein-dot  { background-color: #52c41a; }
+  &.fat-dot      { background-color: #faad14; }
+  &.carb-dot     { background-color: #1890ff; }
+  &.fiber-dot    { background-color: #36cfc9; }
 }
 
 .avg-name {
@@ -386,16 +469,88 @@ export default {
   color: #999999;
 }
 
+/* 三大营养素能量分配 */
+.macro-ratio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.ratio-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.ratio-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.ratio-name {
+  font-size: 26rpx;
+  color: #333333;
+  flex: 1;
+}
+
+.ratio-tag {
+  font-size: 20rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+
+  &.ok   { background-color: #f6ffed; color: #52c41a; }
+  &.warn { background-color: #fff7e6; color: #faad14; }
+}
+
+.ratio-pct {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333333;
+  width: 70rpx;
+  text-align: right;
+}
+
+.ratio-bar-bg {
+  height: 12rpx;
+  background-color: #f0f0f0;
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.ratio-bar-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+
+  &.protein-bar { background-color: #52c41a; }
+  &.fat-bar     { background-color: #faad14; }
+  &.carb-bar    { background-color: #1890ff; }
+}
+
+.ratio-ref {
+  font-size: 20rpx;
+  color: #bbbbbb;
+}
+
 /* 建议卡片 */
 .advice-card {
   background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%);
   border: 1rpx solid #e0e8ff;
 }
 
-.advice-text {
-  font-size: 28rpx;
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.advice-item {
+  font-size: 26rpx;
   color: #444444;
-  line-height: 1.8;
+  line-height: 1.7;
+  padding-left: 20rpx;
+  border-left: 4rpx solid #667eea;
 }
 
 /* 日明细 */
@@ -451,7 +606,7 @@ export default {
   border-radius: 5rpx;
 
   &.calories-fill { background-color: #667eea; }
-  &.protein-fill { background-color: #52c41a; }
+  &.protein-fill  { background-color: #52c41a; }
 }
 
 .detail-val {

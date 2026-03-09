@@ -28,18 +28,26 @@
         <view class="macro-item">
           <text class="macro-num">{{ summary.protein }}</text>
           <text class="macro-label">蛋白质(g)</text>
-          <view class="macro-bar"><view class="macro-fill protein" :style="{ width: Math.min(summary.protein / 60 * 100, 100) + '%' }"></view></view>
+          <view class="macro-bar"><view class="macro-fill protein" :style="{ width: Math.min(summary.protein / macroTargets.protein * 100, 100) + '%' }"></view></view>
         </view>
         <view class="macro-item">
           <text class="macro-num">{{ summary.fat }}</text>
           <text class="macro-label">脂肪(g)</text>
-          <view class="macro-bar"><view class="macro-fill fat" :style="{ width: Math.min(summary.fat / 65 * 100, 100) + '%' }"></view></view>
+          <view class="macro-bar"><view class="macro-fill fat" :style="{ width: Math.min(summary.fat / macroTargets.fat * 100, 100) + '%' }"></view></view>
         </view>
         <view class="macro-item">
           <text class="macro-num">{{ summary.carbohydrate }}</text>
           <text class="macro-label">碳水(g)</text>
-          <view class="macro-bar"><view class="macro-fill carb" :style="{ width: Math.min(summary.carbohydrate / 300 * 100, 100) + '%' }"></view></view>
+          <view class="macro-bar"><view class="macro-fill carb" :style="{ width: Math.min(summary.carbohydrate / macroTargets.carbohydrate * 100, 100) + '%' }"></view></view>
         </view>
+      </view>
+      <!-- 膳食纤维行 -->
+      <view class="fiber-row">
+        <view class="fiber-label-group">
+          <text class="fiber-label">膳食纤维</text>
+          <text class="fiber-value">{{ summary.fiber }}g / {{ macroTargets.fiber }}g</text>
+        </view>
+        <view class="fiber-bar"><view class="fiber-fill" :style="{ width: Math.min(summary.fiber / macroTargets.fiber * 100, 100) + '%' }"></view></view>
       </view>
     </view>
 
@@ -60,13 +68,16 @@
           class="log-item"
           v-for="log in getMealLogs(meal.type)"
           :key="log.id"
-          @longpress="confirmDelete(log)"
         >
-          <view class="log-info">
+          <view class="log-top-row">
             <text class="log-name">{{ log.food_name }}</text>
-            <text class="log-macros">蛋白{{ log.protein }}g · 脂肪{{ log.fat }}g · 碳水{{ log.carbohydrate }}g</text>
+            <view class="log-actions">
+              <text class="action-icon" @click.stop="openEditModal(log)">✏️</text>
+              <text class="action-icon" @click.stop="confirmDelete(log)">🗑️</text>
+            </view>
+            <text class="log-cal">{{ log.calories }} 千卡</text>
           </view>
-          <text class="log-cal">{{ log.calories }} 千卡</text>
+          <text class="log-macros">蛋白{{ log.protein }}g · 脂肪{{ log.fat }}g · 碳水{{ log.carbohydrate }}g · 纤维{{ log.fiber || 0 }}g</text>
         </view>
       </view>
       <view class="meal-empty" v-else>
@@ -79,45 +90,47 @@
       <text>📊 查看营养报表</text>
     </view>
 
-    <!-- 添加记录弹窗 -->
-    <view class="modal-mask" v-if="showModal" @click.self="closeModal">
-      <view class="modal-box">
+    <!-- 添加/编辑记录弹窗 -->
+    <view class="modal-mask" v-if="showModal" @click="closeModal">
+      <view class="modal-box" @click.stop>
         <view class="modal-header">
-          <text class="modal-title">添加{{ currentMealLabel }}</text>
+          <text class="modal-title">{{ editingLog ? '编辑记录' : '添加' + currentMealLabel }}</text>
           <text class="modal-close" @click="closeModal">✕</text>
         </view>
 
-        <!-- 搜索食谱 -->
-        <view class="search-bar">
-          <input
-            class="search-input"
-            v-model="searchKeyword"
-            placeholder="搜索食谱名称..."
-            @input="onSearchInput"
-            confirm-type="search"
-          />
+        <!-- 搜索食谱（仅添加模式） -->
+        <view v-if="!editingLog">
+          <view class="search-bar">
+            <input
+              class="search-input"
+              v-model="searchKeyword"
+              placeholder="搜索食谱名称..."
+              @input="onSearchInput"
+              confirm-type="search"
+            />
+          </view>
+
+          <!-- 搜索结果 -->
+          <scroll-view class="search-results" scroll-y v-if="searchResults.length > 0">
+            <view
+              class="search-item"
+              v-for="recipe in searchResults"
+              :key="recipe.id"
+              @click="selectRecipe(recipe)"
+            >
+              <image class="search-cover" :src="recipe.cover_image || '/static/images/default-recipe.svg'" mode="aspectFill" />
+              <view class="search-info">
+                <text class="search-name">{{ recipe.name }}</text>
+                <text class="search-cal">{{ recipe.total_calories || '—' }} 千卡</text>
+              </view>
+            </view>
+          </scroll-view>
         </view>
 
-        <!-- 搜索结果 -->
-        <scroll-view class="search-results" scroll-y v-if="searchResults.length > 0">
-          <view
-            class="search-item"
-            v-for="recipe in searchResults"
-            :key="recipe.id"
-            @click="selectRecipe(recipe)"
-          >
-            <image class="search-cover" :src="recipe.cover_image || '/static/images/default-recipe.svg'" mode="aspectFill" />
-            <view class="search-info">
-              <text class="search-name">{{ recipe.name }}</text>
-              <text class="search-cal">{{ recipe.total_calories || '—' }} 千卡</text>
-            </view>
-          </view>
-        </scroll-view>
-
-        <!-- 自定义食物 -->
+        <!-- 自定义食物 / 编辑表单 -->
         <view class="custom-section">
-          <text class="custom-title">或手动输入</text>
-          <input class="custom-input" v-model="customForm.name" placeholder="食物名称" />
+          <text class="custom-title">{{ editingLog ? '修改营养信息' : '或手动输入' }}</text>
+          <input class="custom-input" v-model="customForm.name" :disabled="!!editingLog && !!editingLog.recipe" placeholder="食物名称" />
           <view class="custom-row">
             <view class="custom-field">
               <text class="custom-label">热量(千卡)</text>
@@ -138,8 +151,15 @@
               <input class="custom-num" v-model="customForm.carbohydrate" type="digit" placeholder="0" />
             </view>
           </view>
+          <view class="custom-row">
+            <view class="custom-field">
+              <text class="custom-label">纤维(g)</text>
+              <input class="custom-num" v-model="customForm.fiber" type="digit" placeholder="0" />
+            </view>
+            <view class="custom-field"></view>
+          </view>
           <view class="custom-submit" @click="submitCustom">
-            <text>添加自定义食物</text>
+            <text>{{ editingLog ? '保存修改' : '添加自定义食物' }}</text>
           </view>
         </view>
       </view>
@@ -148,7 +168,7 @@
 </template>
 
 <script>
-import { getDiaryByDate, addDiaryRecord, deleteDiaryRecord } from '@/api/nutrition'
+import { getDiaryByDate, addDiaryRecord, deleteDiaryRecord, updateDiaryRecord } from '@/api/nutrition'
 import { getRecipeList } from '@/api/recipe'
 import { useUserStore } from '@/store'
 
@@ -158,7 +178,7 @@ export default {
     return {
       date: '',
       logs: [],
-      summary: { calories: 0, protein: 0, fat: 0, carbohydrate: 0 },
+      summary: { calories: 0, protein: 0, fat: 0, carbohydrate: 0, fiber: 0 },
       targetCalories: 2000,
       loading: false,
       showModal: false,
@@ -166,7 +186,8 @@ export default {
       searchKeyword: '',
       searchResults: [],
       searchTimer: null,
-      customForm: { name: '', calories: '', protein: '', fat: '', carbohydrate: '' },
+      editingLog: null,
+      customForm: { name: '', calories: '', protein: '', fat: '', carbohydrate: '', fiber: '' },
       mealTypes: [
         { type: 'breakfast', label: '早餐', icon: '🌅' },
         { type: 'lunch', label: '午餐', icon: '☀️' },
@@ -198,24 +219,40 @@ export default {
     currentMealLabel() {
       const meal = this.mealTypes.find(m => m.type === this.currentMealType)
       return meal ? meal.label : ''
+    },
+    macroTargets() {
+      const cal = this.targetCalories || 2000
+      return {
+        protein:      Math.max(Math.round(cal * 0.175 / 4), 1),
+        fat:          Math.max(Math.round(cal * 0.300 / 9), 1),
+        carbohydrate: Math.max(Math.round(cal * 0.525 / 4), 1),
+        fiber:        25,
+      }
     }
   },
   onLoad() {
     this.date = new Date().toISOString().slice(0, 10)
-    const userStore = useUserStore()
-    if (userStore.userProfile?.daily_calories_target) {
-      this.targetCalories = userStore.userProfile.daily_calories_target
-    }
+    this._syncTargetCalories()
     this.loadDiary()
   },
+  onShow() {
+    this._syncTargetCalories()
+  },
   methods: {
+    _syncTargetCalories() {
+      const userStore = useUserStore()
+      if (userStore.userInfo?.daily_calories_target) {
+        this.targetCalories = userStore.userInfo.daily_calories_target
+      }
+    },
+
     async loadDiary() {
       this.loading = true
       try {
         const res = await getDiaryByDate(this.date)
         const data = res.data || {}
         this.logs = data.logs || []
-        this.summary = data.summary || { calories: 0, protein: 0, fat: 0, carbohydrate: 0 }
+        this.summary = data.summary || { calories: 0, protein: 0, fat: 0, carbohydrate: 0, fiber: 0 }
       } catch (error) {
         console.error('加载失败:', error)
         uni.showToast({ title: '加载失败', icon: 'none' })
@@ -247,14 +284,31 @@ export default {
 
     openAddModal(mealType) {
       this.currentMealType = mealType
+      this.editingLog = null
       this.searchKeyword = ''
       this.searchResults = []
-      this.customForm = { name: '', calories: '', protein: '', fat: '', carbohydrate: '' }
+      this.customForm = { name: '', calories: '', protein: '', fat: '', carbohydrate: '', fiber: '' }
+      this.showModal = true
+    },
+
+    openEditModal(log) {
+      this.editingLog = log
+      this.customForm = {
+        name: log.food_name,
+        calories: String(log.calories),
+        protein: String(log.protein),
+        fat: String(log.fat),
+        carbohydrate: String(log.carbohydrate),
+        fiber: String(log.fiber || 0),
+      }
+      this.searchKeyword = ''
+      this.searchResults = []
       this.showModal = true
     },
 
     closeModal() {
       this.showModal = false
+      this.editingLog = null
     },
 
     onSearchInput() {
@@ -279,7 +333,7 @@ export default {
     async selectRecipe(recipe) {
       try {
         await addDiaryRecord({
-          recipe_id: recipe.id,
+          recipe: recipe.id,
           meal_type: this.currentMealType,
           date: this.date
         })
@@ -297,22 +351,31 @@ export default {
         uni.showToast({ title: '请输入食物名称', icon: 'none' })
         return
       }
+      const form = {
+        calories:     Number(this.customForm.calories)     || 0,
+        protein:      Number(this.customForm.protein)      || 0,
+        fat:          Number(this.customForm.fat)          || 0,
+        carbohydrate: Number(this.customForm.carbohydrate) || 0,
+        fiber:        Number(this.customForm.fiber)        || 0,
+      }
       try {
-        await addDiaryRecord({
-          custom_name: this.customForm.name,
-          calories: Number(this.customForm.calories) || 0,
-          protein: Number(this.customForm.protein) || 0,
-          fat: Number(this.customForm.fat) || 0,
-          carbohydrate: Number(this.customForm.carbohydrate) || 0,
-          meal_type: this.currentMealType,
-          date: this.date
-        })
+        if (this.editingLog) {
+          await updateDiaryRecord(this.editingLog.id, form)
+          uni.showToast({ title: '修改成功', icon: 'success' })
+        } else {
+          await addDiaryRecord({
+            custom_name: this.customForm.name,
+            ...form,
+            meal_type: this.currentMealType,
+            date: this.date
+          })
+          uni.showToast({ title: '添加成功', icon: 'success' })
+        }
         this.closeModal()
-        uni.showToast({ title: '添加成功', icon: 'success' })
         this.loadDiary()
       } catch (error) {
-        console.error('添加失败:', error)
-        uni.showToast({ title: '添加失败', icon: 'none' })
+        console.error('操作失败:', error)
+        uni.showToast({ title: '操作失败', icon: 'none' })
       }
     },
 
@@ -544,9 +607,6 @@ export default {
 }
 
 .log-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 20rpx 0;
   border-bottom: 1rpx solid #f9f9f9;
 
@@ -555,27 +615,38 @@ export default {
   }
 }
 
-.log-info {
-  flex: 1;
+.log-top-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
 }
 
 .log-name {
+  flex: 1;
   font-size: 28rpx;
   color: #333333;
-  display: block;
-  margin-bottom: 6rpx;
 }
 
-.log-macros {
-  font-size: 22rpx;
-  color: #999999;
+.log-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-right: 16rpx;
+}
+
+.action-icon {
+  font-size: 32rpx;
+  padding: 4rpx;
 }
 
 .log-cal {
   font-size: 28rpx;
   color: #667eea;
   font-weight: 500;
-  margin-left: 20rpx;
+}
+
+.log-macros {
+  font-size: 22rpx;
+  color: #999999;
 }
 
 .meal-empty {
@@ -755,5 +826,43 @@ export default {
     color: #ffffff;
     font-weight: 500;
   }
+}
+
+/* 膳食纤维行 */
+.fiber-row {
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.fiber-label-group {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.fiber-label {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.fiber-value {
+  font-size: 22rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.fiber-bar {
+  height: 8rpx;
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.fiber-fill {
+  height: 100%;
+  background-color: #52c41a;
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
 }
 </style>
