@@ -70,6 +70,12 @@
       }
     },
     {
+      "path": "pages/shopping/share",
+      "style": {
+        "navigationBarTitleText": "查看购物清单"
+      }
+    },
+    {
       "path": "pages/user/login",
       "style": {
         "navigationBarTitleText": "登录"

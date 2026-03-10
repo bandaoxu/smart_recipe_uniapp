@@ -72,3 +72,36 @@ export const generateShoppingList = (data) => {
     data
   })
 }
+
+// ─── 分享相关 ─────────────────────────────────────────────
+
+/**
+ * 创建分享链接（需登录）
+ * @param {Object} data - { permission: 'read'|'edit', days: 1|3|7|30 }
+ */
+export const createShare = (data) =>
+  request({ url: '/shopping-list/share/', method: 'POST', data })
+
+/**
+ * 撤销分享链接（需登录）
+ * @param {String} token - 分享 Token
+ */
+export const revokeShare = (token) =>
+  request({ url: `/shopping-list/share/${token}/`, method: 'DELETE' })
+
+/**
+ * 获取分享的购物清单（无需登录）
+ * @param {String} token - 分享 Token
+ */
+export const getSharedList = (token) =>
+  request({ url: `/shopping-list/shared/${token}/`, method: 'GET', needAuth: false })
+
+/**
+ * 更新分享清单中的购买状态（无需登录，需 edit 权限）
+ * @param {String} token - 分享 Token
+ * @param {Number} id - 清单项 ID
+ * @param {Object} data - { is_purchased: Boolean }
+ */
+export const updateSharedItem = (token, id, data) =>
+  request({ url: `/shopping-list/shared/${token}/${id}/`, method: 'PATCH', needAuth: false, data })
+

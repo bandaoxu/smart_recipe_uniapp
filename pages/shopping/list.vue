@@ -42,9 +42,14 @@
         <text class="stat-text">共 {{ items.length }} 项</text>
         <text class="stat-text">已购 {{ purchasedCount }} 项</text>
       </view>
-      <button class="clear-btn" @click="clearPurchased" v-if="purchasedCount > 0">
-        清除已购
-      </button>
+      <view class="bottom-actions">
+        <view class="share-bar-btn" @click="openShareModal">
+          <text>分享</text>
+        </view>
+        <button class="clear-btn" @click="clearPurchased" v-if="purchasedCount > 0">
+          清除已购
+        </button>
+      </view>
     </view>
 
     <!-- 添加按钮 -->
@@ -93,22 +98,95 @@
         </view>
       </view>
     </view>
+
+    <!-- ── 分享设置弹窗 ── -->
+    <view class="add-modal" v-if="showShareSetup" @click="showShareSetup = false">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">分享购物清单</text>
+        </view>
+        <view class="modal-body">
+          <!-- 权限 -->
+          <text class="label">分享权限</text>
+          <view class="option-row">
+            <view
+              class="option-btn"
+              :class="{ active: shareForm.permission === 'read' }"
+              @click="shareForm.permission = 'read'"
+            >
+              <text>只读</text>
+              <text class="option-desc">仅查看，不可修改</text>
+            </view>
+            <view
+              class="option-btn"
+              :class="{ active: shareForm.permission === 'edit' }"
+              @click="shareForm.permission = 'edit'"
+            >
+              <text>可编辑</text>
+              <text class="option-desc">可标记已购买</text>
+            </view>
+          </view>
+          <!-- 有效期 -->
+          <text class="label" style="margin-top: 24rpx;">有效期</text>
+          <view class="option-row">
+            <view
+              class="option-btn small"
+              v-for="d in [1, 3, 7, 30]"
+              :key="d"
+              :class="{ active: shareForm.days === d }"
+              @click="shareForm.days = d"
+            >
+              <text>{{ d }}天</text>
+            </view>
+          </view>
+        </view>
+        <view class="modal-actions">
+          <button class="cancel-btn" @click="showShareSetup = false">取消</button>
+          <button class="submit-btn" @click="doCreateShare" :loading="sharing">生成链接</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 分享操作面板 ── -->
+    <view class="add-modal" v-if="showSharePanel" @click="showSharePanel = false">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">分享链接已生成</text>
+        </view>
+        <view class="modal-body">
+          <view class="share-meta">
+            <text class="share-meta-text">
+              权限：{{ shareResult.permission === 'read' ? '只读' : '可编辑' }}
+            </text>
+            <text class="share-meta-text">
+              有效期至：{{ shareResult.expires_label }}
+            </text>
+          </view>
+          <view class="share-actions">
+            <view class="share-action-item" @click="copyShareLink">
+              <text class="share-action-icon">📋</text>
+              <text class="share-action-text">复制链接</text>
+            </view>
+            <view class="share-action-item" @click="forwardToFriend">
+              <text class="share-action-icon">💬</text>
+              <text class="share-action-text">转发给朋友</text>
+            </view>
+            <view class="share-action-item danger" @click="doRevokeShare">
+              <text class="share-action-icon">🗑️</text>
+              <text class="share-action-text">撤销链接</text>
+            </view>
+          </view>
+        </view>
+        <view class="modal-actions">
+          <button class="submit-btn" @click="showSharePanel = false">关闭</button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script>
-/**
- * list.vue - 购物清单页面
- *
- * 功能：
- * 1. 显示购物清单列表
- * 2. 勾选已购买
- * 3. 删除食材
- * 4. 添加食材
- * 5. 清除已购买的食材
- */
-
-import { getShoppingList, addShoppingItem, updateShoppingItem, deleteShoppingItem } from '@/api/shopping'
+import { getShoppingList, addShoppingItem, updateShoppingItem, deleteShoppingItem, createShare, revokeShare } from '@/api/shopping'
 
 export default {
   name: 'ShoppingList',
@@ -122,7 +200,13 @@ export default {
         ingredient_name: '',
         quantity: '',
         unit: ''
-      }
+      },
+      // 分享
+      showShareSetup: false,
+      showSharePanel: false,
+      sharing: false,
+      shareForm: { permission: 'read', days: 7 },
+      shareResult: { token: '', permission: 'read', expires_label: '', share_path: '' },
     }
   },
   computed: {
@@ -136,57 +220,45 @@ export default {
   onShow() {
     this.loadData()
   },
+  onShareAppMessage() {
+    // 支持页面右上角转发（微信小程序）
+    if (this.shareResult.token) {
+      return {
+        title: '我的购物清单',
+        path: `/pages/shopping/share?token=${this.shareResult.token}`,
+      }
+    }
+    return { title: '智能食谱 - 购物清单' }
+  },
   onPullDownRefresh() {
     this.loadData().then(() => {
       uni.stopPullDownRefresh()
     })
   },
   methods: {
-    /**
-     * 加载数据
-     */
     async loadData() {
       this.loading = true
-
       try {
         const res = await getShoppingList()
         this.items = Array.isArray(res.data) ? res.data : (res.data.results || [])
-
       } catch (error) {
         console.error('加载失败:', error)
-        uni.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+        uni.showToast({ title: '加载失败', icon: 'none' })
       } finally {
         this.loading = false
       }
     },
 
-    /**
-     * 切换购买状态
-     */
     async togglePurchased(item) {
       try {
-        await updateShoppingItem(item.id, {
-          is_purchased: !item.is_purchased
-        })
-
-        // 更新本地数据
+        await updateShoppingItem(item.id, { is_purchased: !item.is_purchased })
         item.is_purchased = !item.is_purchased
-
       } catch (error) {
         console.error('更新失败:', error)
-        uni.showToast({
-          title: '操作失败',
-          icon: 'none'
-        })
+        uni.showToast({ title: '操作失败', icon: 'none' })
       }
     },
 
-    /**
-     * 删除食材
-     */
     deleteItem(itemId) {
       uni.showModal({
         title: '提示',
@@ -195,33 +267,18 @@ export default {
           if (res.confirm) {
             try {
               await deleteShoppingItem(itemId)
-
-              // 从列表中移除
               const index = this.items.findIndex(item => item.id === itemId)
-              if (index > -1) {
-                this.items.splice(index, 1)
-              }
-
-              uni.showToast({
-                title: '删除成功',
-                icon: 'success'
-              })
-
+              if (index > -1) this.items.splice(index, 1)
+              uni.showToast({ title: '删除成功', icon: 'success' })
             } catch (error) {
               console.error('删除失败:', error)
-              uni.showToast({
-                title: '删除失败',
-                icon: 'none'
-              })
+              uni.showToast({ title: '删除失败', icon: 'none' })
             }
           }
         }
       })
     },
 
-    /**
-     * 清除已购买的食材
-     */
     clearPurchased() {
       uni.showModal({
         title: '提示',
@@ -230,104 +287,119 @@ export default {
           if (res.confirm) {
             try {
               const purchasedItems = this.items.filter(item => item.is_purchased)
-
-              // 逐个删除
               for (const item of purchasedItems) {
                 await deleteShoppingItem(item.id)
               }
-
-              // 重新加载数据
               await this.loadData()
-
-              uni.showToast({
-                title: '清除成功',
-                icon: 'success'
-              })
-
+              uni.showToast({ title: '清除成功', icon: 'success' })
             } catch (error) {
               console.error('清除失败:', error)
-              uni.showToast({
-                title: '清除失败',
-                icon: 'none'
-              })
+              uni.showToast({ title: '清除失败', icon: 'none' })
             }
           }
         }
       })
     },
 
-    /**
-     * 显示添加弹窗
-     */
     showAddModal() {
       this.showModal = true
     },
 
-    /**
-     * 隐藏添加弹窗
-     */
     hideAddModal() {
       this.showModal = false
-      this.newItem = {
-        ingredient_name: '',
-        quantity: '',
-        unit: ''
-      }
+      this.newItem = { ingredient_name: '', quantity: '', unit: '' }
     },
 
-    /**
-     * 添加食材
-     */
     async addItem() {
       if (!this.newItem.ingredient_name) {
-        uni.showToast({
-          title: '请输入食材名称',
-          icon: 'none'
-        })
-        return
+        uni.showToast({ title: '请输入食材名称', icon: 'none' }); return
       }
-
       if (!this.newItem.quantity) {
-        uni.showToast({
-          title: '请输入数量',
-          icon: 'none'
-        })
-        return
+        uni.showToast({ title: '请输入数量', icon: 'none' }); return
       }
-
       if (!this.newItem.unit) {
-        uni.showToast({
-          title: '请输入单位',
-          icon: 'none'
-        })
-        return
+        uni.showToast({ title: '请输入单位', icon: 'none' }); return
       }
-
       this.submitting = true
-
       try {
         await addShoppingItem(this.newItem)
-
-        uni.showToast({
-          title: '添加成功',
-          icon: 'success'
-        })
-
+        uni.showToast({ title: '添加成功', icon: 'success' })
         this.hideAddModal()
-
-        // 重新加载数据
         await this.loadData()
-
       } catch (error) {
         console.error('添加失败:', error)
-        uni.showToast({
-          title: error.message || '添加失败',
-          icon: 'none'
-        })
+        uni.showToast({ title: error.message || '添加失败', icon: 'none' })
       } finally {
         this.submitting = false
       }
-    }
+    },
+
+    // ── 分享 ────────────────────────────────────────────
+
+    openShareModal() {
+      this.shareForm = { permission: 'read', days: 7 }
+      this.showShareSetup = true
+    },
+
+    async doCreateShare() {
+      this.sharing = true
+      try {
+        const res = await createShare(this.shareForm)
+        const data = res.data
+        // 格式化过期时间
+        const expiresAt = new Date(data.expires_at)
+        const label = `${expiresAt.getMonth() + 1}月${expiresAt.getDate()}日`
+        this.shareResult = {
+          token: data.token,
+          permission: data.permission,
+          expires_label: label,
+          share_path: data.share_path,
+        }
+        this.showShareSetup = false
+        this.showSharePanel = true
+      } catch (error) {
+        console.error('创建分享失败:', error)
+        uni.showToast({ title: '创建失败', icon: 'none' })
+      } finally {
+        this.sharing = false
+      }
+    },
+
+    copyShareLink() {
+      const path = this.shareResult.share_path
+      uni.setClipboardData({
+        data: path,
+        success: () => {
+          uni.showToast({ title: '链接已复制', icon: 'success' })
+        }
+      })
+    },
+
+    forwardToFriend() {
+      // 触发微信小程序转发，需 onShareAppMessage 钩子已配置
+      uni.showShareMenu({ withShareTicket: true })
+    },
+
+    doRevokeShare() {
+      uni.showModal({
+        title: '撤销分享',
+        content: '撤销后，已分享的链接将失效，确定撤销吗？',
+        confirmColor: '#ff4d4f',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await revokeShare(this.shareResult.token)
+              this.shareResult = { token: '', permission: 'read', expires_label: '', share_path: '' }
+              this.showSharePanel = false
+              uni.showToast({ title: '已撤销', icon: 'none' })
+            } catch (error) {
+              console.error('撤销失败:', error)
+              uni.showToast({ title: '撤销失败', icon: 'none' })
+            }
+          }
+        }
+      })
+    },
   }
 }
 </script>
@@ -453,6 +525,23 @@ export default {
   margin-bottom: 5rpx;
 }
 
+.bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.share-bar-btn {
+  padding: 16rpx 32rpx;
+  border-radius: 10rpx;
+  background-color: #667eea;
+
+  text {
+    font-size: 26rpx;
+    color: #ffffff;
+  }
+}
+
 .clear-btn {
   padding: 20rpx 40rpx;
   background-color: #ff4d4f;
@@ -548,8 +637,6 @@ export default {
   margin-bottom: 15rpx;
 }
 
-/* 移除原生 input 样式，已被 uni-easyinput 替代 */
-
 .modal-actions {
   display: flex;
   border-top: 1rpx solid #f0f0f0;
@@ -577,5 +664,94 @@ export default {
 .cancel-btn::after,
 .submit-btn::after {
   border: none;
+}
+
+/* 分享设置 */
+.option-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.option-btn {
+  flex: 1;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 20rpx 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+
+  text:first-child {
+    font-size: 28rpx;
+    color: #333333;
+    font-weight: 500;
+  }
+
+  &.active {
+    border-color: #667eea;
+    background-color: rgba(102, 126, 234, 0.06);
+
+    text:first-child {
+      color: #667eea;
+    }
+  }
+
+  &.small {
+    padding: 16rpx 8rpx;
+  }
+}
+
+.option-desc {
+  font-size: 20rpx;
+  color: #999999;
+}
+
+/* 分享操作面板 */
+.share-meta {
+  background-color: #f9f9f9;
+  border-radius: 10rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.share-meta-text {
+  display: block;
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 2;
+}
+
+.share-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.share-action-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx 16rpx;
+  border-radius: 12rpx;
+  background-color: #f5f5f5;
+
+  &.danger {
+    background-color: #fff1f0;
+  }
+}
+
+.share-action-icon {
+  font-size: 36rpx;
+}
+
+.share-action-text {
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.share-action-item.danger .share-action-text {
+  color: #ff4d4f;
 }
 </style>
