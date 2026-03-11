@@ -7,3 +7,4 @@
 
 export { useUserStore } from './user'
 export { useAppStore } from './app'
+export { useFollowStore } from './follow'

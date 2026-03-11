@@ -60,7 +60,7 @@
 
       <!-- 提交按钮 -->
       <button class="submit-btn" @click="handleSubmit" :loading="loading">
-        {{ loading ? '发布中...' : '发布动态' }}
+        {{ loading ? (editPostId ? '保存中...' : '发布中...') : (editPostId ? '保存修改' : '发布动态') }}
       </button>
     </view>
   </view>
@@ -77,7 +77,7 @@
  * 4. 提交发布
  */
 
-import { createPost } from '@/api/community'
+import { createPost, updatePost, getPostDetail } from '@/api/community'
 import { getMyRecipes } from '@/api/recipe'
 import { getToken } from '@/utils/auth'
 
@@ -85,6 +85,7 @@ export default {
   name: 'PublishPost',
   data() {
     return {
+      editPostId: null,
       formData: {
         content: '',
         images: [],
@@ -94,7 +95,30 @@ export default {
       loading: false
     }
   },
+  onLoad(options) {
+    if (options.post_id) {
+      this.editPostId = Number(options.post_id)
+      this.loadPostForEdit()
+    }
+  },
   methods: {
+    async loadPostForEdit() {
+      try {
+        const res = await getPostDetail(this.editPostId)
+        const post = res.data
+        this.formData.content = post.content || ''
+        this.formData.images = post.images || []
+        if (post.recipe) {
+          this.selectedRecipe = post.recipe
+          this.formData.recipe_id = post.recipe.id
+        }
+        uni.setNavigationBarTitle({ title: '编辑动态' })
+      } catch (error) {
+        console.error('加载动态失败:', error)
+        uni.showToast({ title: '加载失败', icon: 'none' })
+      }
+    },
+
     /**
      * 选择图片
      */
@@ -238,12 +262,13 @@ export default {
       this.loading = true
 
       try {
-        await createPost(this.formData)
-
-        uni.showToast({
-          title: '发布成功',
-          icon: 'success'
-        })
+        if (this.editPostId) {
+          await updatePost(this.editPostId, this.formData)
+          uni.showToast({ title: '保存成功', icon: 'success' })
+        } else {
+          await createPost(this.formData)
+          uni.showToast({ title: '发布成功', icon: 'success' })
+        }
 
         setTimeout(() => {
           uni.navigateBack()

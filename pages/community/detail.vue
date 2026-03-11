@@ -15,6 +15,10 @@
           <view v-if="!isOwnPost" class="follow-btn" :class="{ followed: isFollowing }" @click="handleFollow">
             <text>{{ isFollowing ? '已关注' : '+ 关注' }}</text>
           </view>
+          <!-- 更多操作（本人才显示） -->
+          <view v-if="isOwnPost" class="more-btn" @click="showPostActions">
+            <text>···</text>
+          </view>
         </view>
 
         <!-- 文本内容 -->
@@ -56,7 +60,7 @@
         <view class="section-title">
           <text>评论 ({{ comments.length }})</text>
         </view>
-        <CommentList :comments="comments" @reply="handleReply" />
+        <CommentList :comments="comments" :currentUserId="currentUserId" @reply="handleReply" @deleted="handleCommentDeleted" />
 
         <!-- 空状态 -->
         <view class="empty-comments" v-if="comments.length === 0">
@@ -76,6 +80,10 @@
         <text class="input-placeholder">说点什么...</text>
       </view>
       <view class="action-buttons">
+        <view class="action-btn" @click="handleShare">
+          <text class="action-icon">↗️</text>
+          <text class="action-text">分享</text>
+        </view>
         <view class="action-btn" @click="handleLike">
           <text class="action-icon">{{ post.is_liked ? '❤️' : '🤍' }}</text>
           <text class="action-text">{{ post.likes }}</text>
@@ -121,9 +129,8 @@
  */
 
 import CommentList from '@/components/CommentList.vue'
-import { getPostDetail, likePost, getComments, createComment } from '@/api/community'
-import { followUser, unfollowUser } from '@/api/user'
-import { useUserStore } from '@/store'
+import { getPostDetail, likePost, getComments, createComment, deletePost, deleteComment } from '@/api/community'
+import { useUserStore, useFollowStore } from '@/store'
 import { formatTime } from '@/utils/format'
 
 export default {
@@ -141,15 +148,32 @@ export default {
       commentContent: '',
       submitting: false,
       replyingTo: null,
-      isFollowing: false,
-      isOwnPost: false,
-      followLoading: false
+      isOwnPost: false
+    }
+  },
+  computed: {
+    isFollowing() {
+      return useFollowStore().isFollowing(this.post.user?.id)
+    },
+    currentUserId() {
+      return useUserStore().userId
     }
   },
   onLoad(options) {
     if (options.id) {
       this.postId = options.id
       this.loadData()
+    }
+  },
+  onShow() {
+    if (this.postId && !this.loading) {
+      this.refreshState()
+    }
+  },
+  onShareAppMessage() {
+    return {
+      title: this.post.content?.slice(0, 40) || '美食动态',
+      path: `/pages/community/detail?id=${this.postId}`,
     }
   },
   methods: {
@@ -167,6 +191,21 @@ export default {
     },
 
     /**
+     * 刷新点赞和关注状态（从详情页/其他页返回时调用）
+     */
+    async refreshState() {
+      try {
+        const res = await getPostDetail(this.postId)
+        const fresh = res.data || {}
+        if (fresh.is_liked !== undefined) this.post.is_liked = fresh.is_liked
+        if (fresh.likes !== undefined) this.post.likes = fresh.likes
+        if (fresh.user?.is_following !== undefined) {
+          useFollowStore().setFollowing(fresh.user.id, fresh.user.is_following)
+        }
+      } catch {}
+    },
+
+    /**
      * 加载数据
      */
     async loadData() {
@@ -180,8 +219,8 @@ export default {
         // 初始化关注状态（后端返回 author.is_following）
         const userStore = useUserStore()
         const authorId = this.post.user?.id || this.post.author?.id
-        this.isOwnPost = userStore.isLoggedIn && (userStore.userInfo?.id === authorId)
-        this.isFollowing = this.post.user?.is_following || false
+        this.isOwnPost = userStore.isLoggedIn && (userStore.userId === authorId)
+        useFollowStore().setFollowing(authorId, this.post.user?.is_following || false)
 
         // 加载评论列表
         const commentsRes = await getComments(this.postId)
@@ -245,23 +284,19 @@ export default {
      * 关注/取消关注作者
      */
     async handleFollow() {
-      if (this.followLoading) return
-      this.followLoading = true
+      const followStore = useFollowStore()
+      const authorId = this.post.user?.id
       try {
-        const authorId = this.post.user?.id
         if (this.isFollowing) {
-          await unfollowUser(authorId)
-          this.isFollowing = false
+          await followStore.unfollow(authorId)
           uni.showToast({ title: '已取消关注', icon: 'none' })
         } else {
-          await followUser(authorId)
-          this.isFollowing = true
+          await followStore.follow(authorId)
           uni.showToast({ title: '关注成功', icon: 'success' })
         }
       } catch (error) {
         console.error('操作失败:', error)
-      } finally {
-        this.followLoading = false
+        uni.showToast({ title: '操作失败', icon: 'none' })
       }
     },
 
@@ -290,10 +325,36 @@ export default {
     },
 
     /**
+     * 删除评论
+     */
+    async handleCommentDeleted({ id, parentId }) {
+      try {
+        await deleteComment(id)
+        if (parentId === null) {
+          const idx = this.comments.findIndex(c => c.id === id)
+          if (idx > -1) {
+            this.comments.splice(idx, 1)
+            this.post.comments_count = Math.max(0, (this.post.comments_count || 0) - 1)
+          }
+        } else {
+          const parent = this.comments.find(c => c.id === parentId)
+          if (parent?.replies) {
+            const idx = parent.replies.findIndex(r => r.id === id)
+            if (idx > -1) parent.replies.splice(idx, 1)
+          }
+        }
+        uni.showToast({ title: '已删除', icon: 'none' })
+      } catch {
+        uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+
+    /**
      * 提交评论
      */
     async submitComment() {
-      if (!this.commentContent.trim()) {
+      let content = this.commentContent.trim()
+      if (!content) {
         uni.showToast({
           title: '请输入评论内容',
           icon: 'none'
@@ -301,13 +362,32 @@ export default {
         return
       }
 
+      // 回复子评论时自动添加 @mention
+      if (this.replyingTo?.parentId) {
+        content = `@${this.replyingTo.user?.nickname} ${content}`
+      }
+
       this.submitting = true
 
       try {
-        await createComment(this.postId, {
-          content: this.commentContent,
-          ...(this.replyingTo ? { parent: this.replyingTo.id } : {})
+        const res = await createComment(this.postId, {
+          content,
+          ...(this.replyingTo ? { parent: this.replyingTo.parentId || this.replyingTo.id } : {})
         })
+        const newComment = res.data
+
+        // 乐观更新：直接插入到本地列表，不全量刷新
+        if (this.replyingTo) {
+          const parentId = this.replyingTo.parentId || this.replyingTo.id
+          const parent = this.comments.find(c => c.id === parentId)
+          if (parent) {
+            if (!parent.replies) parent.replies = []
+            parent.replies.push(newComment)
+          }
+        } else {
+          this.comments.push(newComment)
+        }
+        this.post.comments_count = (this.post.comments_count || 0) + 1
 
         uni.showToast({
           title: '评论成功',
@@ -315,11 +395,6 @@ export default {
         })
 
         this.hideCommentInput()
-
-        // 重新加载评论列表
-        const commentsRes = await getComments(this.postId)
-        this.comments = commentsRes.data || []
-        this.post.comments_count = this.comments.length
 
       } catch (error) {
         console.error('评论失败:', error)
@@ -330,6 +405,54 @@ export default {
       } finally {
         this.submitting = false
       }
+    },
+
+    /**
+     * 分享动态（触发微信小程序分享菜单）
+     */
+    handleShare() {
+      uni.showToast({ title: '请点击右上角菜单转发', icon: 'none', duration: 2000 })
+    },
+
+    /**
+     * 显示帖子作者操作菜单（编辑/删除）
+     */
+    showPostActions() {
+      uni.showActionSheet({
+        itemList: ['编辑动态', '删除动态'],
+        success: ({ tapIndex }) => {
+          if (tapIndex === 0) {
+            uni.navigateTo({ url: `/pages/community/publish?post_id=${this.postId}` })
+          } else {
+            this.confirmDeletePost()
+          }
+        }
+      })
+    },
+
+    /**
+     * 确认删除动态
+     */
+    confirmDeletePost() {
+      uni.showModal({
+        title: '删除动态',
+        content: '确定删除这条动态吗？此操作不可撤销。',
+        confirmColor: '#ff4d4f',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await deletePost(this.postId)
+              uni.showToast({ title: '已删除', icon: 'none' })
+              // 返回社区列表
+              if (getCurrentPages().length > 1) uni.navigateBack()
+              else uni.switchTab({ url: '/pages/community/feed' })
+            } catch (error) {
+              console.error('删除失败:', error)
+              uni.showToast({ title: '删除失败', icon: 'none' })
+            }
+          }
+        }
+      })
     }
   }
 }
@@ -641,5 +764,15 @@ export default {
 
 .follow-btn.followed text {
   color: #999999;
+}
+
+.more-btn {
+  padding: 8rpx 20rpx;
+  text {
+    font-size: 36rpx;
+    color: #999999;
+    font-weight: bold;
+    letter-spacing: 2rpx;
+  }
 }
 </style>

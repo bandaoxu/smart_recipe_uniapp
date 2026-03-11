@@ -9,6 +9,7 @@
  */
 
 import request from './request'
+import { getToken } from '@/utils/auth'
 
 /**
  * 用户注册
@@ -143,7 +144,7 @@ export const getPublicProfile = (userId) => {
   return request({
     url: `/user/${userId}/`,
     method: 'GET',
-    needAuth: false
+    needAuth: !!getToken()
   })
 }
 

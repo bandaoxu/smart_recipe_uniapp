@@ -81,7 +81,7 @@
       <view class="section-header">
         <text class="section-title">评论 ({{ comments.length }})</text>
       </view>
-      <CommentList :comments="comments" @reply="handleReply" />
+      <CommentList :comments="comments" :currentUserId="currentUserId" @reply="handleReply" @deleted="handleCommentDeleted" />
       
       <!-- 空状态 -->
       <view class="empty-comments" v-if="comments.length === 0">
@@ -145,6 +145,7 @@
 
 import CommentList from '@/components/CommentList.vue'
 import { getRecipeDetail, likeRecipe, favoriteRecipe, getRecipeComments, createRecipeComment } from '@/api/recipe'
+import { deleteComment } from '@/api/community'
 import { generateShoppingList } from '@/api/shopping'
 import { useUserStore } from '@/store'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
@@ -178,6 +179,9 @@ export default {
         { label: '碳水(g)', value: this.recipe.total_carbohydrate  ?? 0 },
         { label: '纤维(g)', value: this.recipe.total_fiber         ?? 0 },
       ]
+    },
+    currentUserId() {
+      return useUserStore().userId
     }
   },
   onLoad(options) {
@@ -311,6 +315,28 @@ export default {
     },
 
     /**
+     * 删除评论
+     */
+    async handleCommentDeleted({ id, parentId }) {
+      try {
+        await deleteComment(id)
+        if (parentId === null) {
+          const idx = this.comments.findIndex(c => c.id === id)
+          if (idx > -1) this.comments.splice(idx, 1)
+        } else {
+          const parent = this.comments.find(c => c.id === parentId)
+          if (parent?.replies) {
+            const idx = parent.replies.findIndex(r => r.id === id)
+            if (idx > -1) parent.replies.splice(idx, 1)
+          }
+        }
+        uni.showToast({ title: '已删除', icon: 'none' })
+      } catch {
+        uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+
+    /**
      * 显示评论输入框
      */
     showCommentInput() {
@@ -330,29 +356,40 @@ export default {
      * 发表评论
      */
     async submitComment() {
-      if (!this.commentText.trim()) {
+      let content = this.commentText.trim()
+      if (!content) {
         uni.showToast({ title: '请输入评论内容', icon: 'none' })
         return
+      }
+
+      // 回复子评论时自动添加 @mention
+      if (this.replyingTo?.parentId) {
+        content = `@${this.replyingTo.user?.nickname} ${content}`
       }
 
       this.submitting = true
 
       try {
-        await createRecipeComment(this.recipeId, {
-          content: this.commentText,
-          ...(this.replyingTo ? { parent: this.replyingTo.id } : {})
+        const res = await createRecipeComment(this.recipeId, {
+          content,
+          ...(this.replyingTo ? { parent: this.replyingTo.parentId || this.replyingTo.id } : {})
         })
+        const newComment = res.data
 
-        uni.showToast({
-          title: '评论成功',
-          icon: 'success'
-        })
+        // 乐观更新：直接插入到本地列表，不全量刷新
+        if (this.replyingTo) {
+          const parentId = this.replyingTo.parentId || this.replyingTo.id
+          const parent = this.comments.find(c => c.id === parentId)
+          if (parent) {
+            if (!parent.replies) parent.replies = []
+            parent.replies.push(newComment)
+          }
+        } else {
+          this.comments.push(newComment)
+        }
 
+        uni.showToast({ title: '评论成功', icon: 'success' })
         this.hideCommentInput()
-
-        // 重新加载评论列表
-        const commentsRes = await getRecipeComments(this.recipeId)
-        this.comments = commentsRes.data || []
 
       } catch (error) {
         console.error('评论失败:', error)

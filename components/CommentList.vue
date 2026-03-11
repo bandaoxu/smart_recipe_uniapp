@@ -19,13 +19,33 @@
         <!-- 回复按钮 -->
         <view class="comment-actions">
           <text class="reply-btn" @click="handleReply(comment)">回复</text>
+          <text
+            v-if="currentUserId && comment.user?.id === currentUserId"
+            class="delete-btn"
+            @click="handleDelete(comment.id, null)"
+          >删除</text>
         </view>
 
         <!-- 子评论（回复） -->
         <view class="sub-comments" v-if="comment.replies && comment.replies.length > 0">
           <view class="sub-comment" v-for="reply in comment.replies" :key="reply.id">
-            <text class="reply-user">{{ reply.user?.nickname || '匿名' }}</text>
-            <text class="reply-text">: {{ reply.content }}</text>
+            <view class="sub-comment-body">
+              <text class="reply-user">{{ reply.user?.nickname || '匿名' }}</text>
+              <text class="reply-sep">: </text>
+              <template v-if="getMention(reply.content)">
+                <text class="reply-mention">{{ getMention(reply.content) }}</text>
+                <text class="reply-text"> {{ getContentBody(reply.content) }}</text>
+              </template>
+              <template v-else>
+                <text class="reply-text">{{ reply.content }}</text>
+              </template>
+            </view>
+            <text class="reply-btn sub-reply-btn" @click="handleSubReply(reply, comment)">回复</text>
+            <text
+              v-if="currentUserId && reply.user?.id === currentUserId"
+              class="delete-btn sub-delete-btn"
+              @click="handleDelete(reply.id, comment.id)"
+            >删除</text>
           </view>
         </view>
       </view>
@@ -73,6 +93,10 @@ export default {
     hasMore: {
       type: Boolean,
       default: false
+    },
+    currentUserId: {
+      type: Number,
+      default: null
     }
   },
   methods: {
@@ -86,10 +110,39 @@ export default {
     },
 
     /**
+     * 回复子评论（parent 仍指向顶层评论，保持一级嵌套结构）
+     */
+    handleSubReply(reply, parentComment) {
+      this.$emit('reply', { ...reply, parentId: parentComment.id })
+    },
+
+    /**
      * 加载更多
      */
     loadMore() {
       this.$emit('loadMore')
+    },
+
+    getMention(content) {
+      const m = content?.match(/^(@\S+)\s/)
+      return m ? m[1] : null
+    },
+
+    getContentBody(content) {
+      return content?.replace(/^@\S+\s/, '') || content
+    },
+
+    handleDelete(commentId, parentId) {
+      uni.showModal({
+        title: '删除评论',
+        content: '确定删除这条评论吗？',
+        confirmColor: '#ff4d4f',
+        success: (res) => {
+          if (res.confirm) {
+            this.$emit('deleted', { id: commentId, parentId })
+          }
+        }
+      })
     }
   }
 }
@@ -153,6 +206,11 @@ export default {
   color: #3cc51f;
 }
 
+.sub-reply-btn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
 .sub-comments {
   margin-top: 20rpx;
   padding: 20rpx;
@@ -161,10 +219,17 @@ export default {
 }
 
 .sub-comment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 26rpx;
   color: #666666;
   line-height: 1.6;
   margin-bottom: 10rpx;
+}
+
+.sub-comment-body {
+  flex: 1;
 }
 
 .sub-comment:last-child {
@@ -174,6 +239,22 @@ export default {
 .reply-user {
   color: #3cc51f;
   font-weight: bold;
+}
+
+.reply-mention {
+  color: #667eea;
+  font-size: 26rpx;
+}
+
+.delete-btn {
+  font-size: 24rpx;
+  color: #ff4d4f;
+  margin-left: 20rpx;
+}
+
+.sub-delete-btn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
 }
 
 .reply-text {

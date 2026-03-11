@@ -67,14 +67,51 @@
           <text class="empty-text">还没有发布食谱</text>
         </view>
       </view>
+
+      <!-- 动态列表 -->
+      <view class="posts-section">
+        <view class="section-title">
+          <text>Ta的动态</text>
+        </view>
+
+        <view class="post-list" v-if="userPosts.length > 0">
+          <view
+            class="post-card"
+            v-for="p in userPosts"
+            :key="p.id"
+            @click="goToPostDetail(p.id)"
+          >
+            <text class="post-content">{{ p.content }}</text>
+            <view class="post-imgs" v-if="p.images && p.images.length > 0">
+              <image
+                v-for="(img, i) in p.images.slice(0, 3)"
+                :key="i"
+                :src="img"
+                mode="aspectFill"
+                class="post-img"
+              />
+            </view>
+            <view class="post-stats">
+              <text class="post-stat-item">❤️ {{ p.likes || 0 }}</text>
+              <text class="post-stat-item">💬 {{ p.comments_count || 0 }}</text>
+              <text class="post-time">{{ formatPostTime(p.created_at) }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty-recipes" v-else>
+          <text class="empty-text">暂无动态</text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script>
-import { getPublicProfile, followUser, unfollowUser } from '@/api/user'
+import { getPublicProfile } from '@/api/user'
 import { getUserRecipes } from '@/api/recipe'
-import { useUserStore } from '@/store'
+import { getUserPosts } from '@/api/community'
+import { useUserStore, useFollowStore } from '@/store'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
 
 export default {
@@ -84,9 +121,14 @@ export default {
       userId: null,
       userInfo: {},
       recipes: [],
+      userPosts: [],
       loading: false,
-      isFollowing: false,
       followLoading: false
+    }
+  },
+  computed: {
+    isFollowing() {
+      return useFollowStore().isFollowing(this.userId)
     }
   },
   onLoad(options) {
@@ -103,22 +145,30 @@ export default {
       this.loadData()
     }
   },
-  methods: {
+  onShow() {
+    if (this.userId && !this.loading) {
+      this.refreshFollowState()
+    }
+  },  methods: {
     formatDifficulty,
     formatCookingTime,
 
     async loadData() {
       this.loading = true
       try {
-        const [profileRes, recipesRes] = await Promise.all([
+        const [profileRes, recipesRes, postsRes] = await Promise.all([
           getPublicProfile(this.userId),
-          getUserRecipes(this.userId)
+          getUserRecipes(this.userId),
+          getUserPosts(this.userId)
         ])
         this.userInfo = profileRes.data || {}
-        this.isFollowing = this.userInfo.is_following || false
+        useFollowStore().setFollowing(this.userId, this.userInfo.is_following || false)
 
         const recipesData = recipesRes.data
         this.recipes = (recipesData && recipesData.results) ? recipesData.results : (Array.isArray(recipesData) ? recipesData : [])
+
+        const postsData = postsRes.data
+        this.userPosts = (postsData && postsData.results) ? postsData.results : (Array.isArray(postsData) ? postsData : [])
       } catch (error) {
         console.error('加载失败:', error)
         uni.showToast({ title: '加载失败', icon: 'none' })
@@ -137,14 +187,13 @@ export default {
 
       this.followLoading = true
       try {
+        const followStore = useFollowStore()
         if (this.isFollowing) {
-          await unfollowUser(this.userId)
-          this.isFollowing = false
+          await followStore.unfollow(this.userId)
           if (this.userInfo.followers_count > 0) this.userInfo.followers_count--
           uni.showToast({ title: '已取消关注', icon: 'none' })
         } else {
-          await followUser(this.userId)
-          this.isFollowing = true
+          await followStore.follow(this.userId)
           this.userInfo.followers_count = (this.userInfo.followers_count || 0) + 1
           uni.showToast({ title: '关注成功', icon: 'success' })
         }
@@ -157,6 +206,25 @@ export default {
 
     goToRecipe(recipeId) {
       uni.navigateTo({ url: `/pages/recipe/detail?id=${recipeId}` })
+    },
+
+    async refreshFollowState() {
+      try {
+        const res = await getPublicProfile(this.userId)
+        const data = res.data || {}
+        useFollowStore().setFollowing(this.userId, data.is_following || false)
+        this.userInfo.followers_count = data.followers_count || 0
+      } catch {}
+    },
+
+    goToPostDetail(postId) {
+      uni.navigateTo({ url: `/pages/community/detail?id=${postId}` })
+    },
+
+    formatPostTime(dateStr) {
+      if (!dateStr) return ''
+      const d = new Date(dateStr)
+      return `${d.getMonth() + 1}月${d.getDate()}日`
     }
   }
 }
@@ -319,5 +387,59 @@ export default {
 .empty-text {
   font-size: 26rpx;
   color: #999999;
+}
+
+.posts-section {
+  padding: 0 20rpx 40rpx;
+}
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.post-card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 28rpx;
+}
+
+.post-content {
+  display: block;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+
+.post-imgs {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.post-img {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.post-stat-item {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.post-time {
+  font-size: 22rpx;
+  color: #cccccc;
+  margin-left: auto;
 }
 </style>

@@ -5,7 +5,7 @@
       <image class="avatar" :src="userInfo.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"></image>
       <view class="user-info">
         <text class="nickname">{{ userInfo.nickname || '未设置昵称' }}</text>
-        <text class="username">@{{ userInfo.username }}</text>
+        <text class="username">@{{ userInfo.user?.username }}</text>
       </view>
     </view>
 
@@ -55,6 +55,14 @@
         <view class="menu-left">
           <text class="menu-icon">📊</text>
           <text class="menu-text">营养日记</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+
+      <view class="menu-item" @click="goToMyPosts">
+        <view class="menu-left">
+          <text class="menu-icon">📝</text>
+          <text class="menu-text">我的动态</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
@@ -183,6 +191,13 @@ export default {
     goToDiary() {
       uni.navigateTo({
         url: '/pages/nutrition/diary'
+      })
+    },
+
+    goToMyPosts() {
+      const userStore = useUserStore()
+      uni.navigateTo({
+        url: `/pages/community/my-posts?author=${userStore.userId}&title=我的动态`
       })
     },
 

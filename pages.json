@@ -64,6 +64,13 @@
       }
     },
     {
+      "path": "pages/community/my-posts",
+      "style": {
+        "navigationBarTitleText": "我的动态",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
       "path": "pages/shopping/list",
       "style": {
         "navigationBarTitleText": "购物清单"

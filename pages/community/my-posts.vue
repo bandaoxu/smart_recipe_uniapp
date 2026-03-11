@@ -16,16 +16,10 @@
     <view class="empty-state" v-else-if="!loading">
       <text class="empty-icon">📝</text>
       <text class="empty-text">还没有动态</text>
-      <button class="publish-btn" @click="goToPublish" v-if="!authorFilter">发布第一条动态</button>
     </view>
 
     <!-- 加载更多 -->
     <LoadingMore :loading="loading" :hasMore="hasMore" />
-
-    <!-- 发布按钮（非 author 过滤模式才显示） -->
-    <view class="fab" @click="goToPublish" v-if="!authorFilter">
-      <text class="fab-icon">✏️</text>
-    </view>
   </view>
 </template>
 
@@ -35,7 +29,7 @@ import LoadingMore from '@/components/LoadingMore.vue'
 import { getPostList, likePost } from '@/api/community'
 
 export default {
-  name: 'CommunityFeed',
+  name: 'MyPosts',
   components: {
     PostCard,
     LoadingMore
@@ -59,7 +53,7 @@ export default {
     this.loadData()
   },
   onShow() {
-    if (!this.loading) {
+    if (!this.loading && this.authorFilter) {
       this.page = 1
       this.hasMore = true
       this.loadData()
@@ -124,10 +118,6 @@ export default {
       const idx = this.posts.findIndex(p => p.id === postId)
       if (idx > -1) this.posts.splice(idx, 1)
     },
-
-    goToPublish() {
-      uni.navigateTo({ url: '/pages/community/publish' })
-    }
   }
 }
 </script>
@@ -137,7 +127,7 @@ export default {
   min-height: 100vh;
   background-color: #f5f5f5;
   padding: 20rpx;
-  padding-bottom: 120rpx;
+  padding-bottom: 60rpx;
 }
 
 .post-list {
@@ -160,46 +150,5 @@ export default {
 .empty-text {
   font-size: 28rpx;
   color: #999999;
-  margin-bottom: 40rpx;
-}
-
-.publish-btn {
-  width: 300rpx;
-  height: 80rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 40rpx;
-  font-size: 28rpx;
-  color: #ffffff;
-  border: none;
-}
-
-.publish-btn::after {
-  border: none;
-}
-
-.loading {
-  text-align: center;
-  padding: 40rpx 0;
-  font-size: 28rpx;
-  color: #999999;
-}
-
-.fab {
-  position: fixed;
-  right: 40rpx;
-  bottom: 120rpx;
-  width: 120rpx;
-  height: 120rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
-  z-index: 100;
-}
-
-.fab-icon {
-  font-size: 48rpx;
 }
 </style>

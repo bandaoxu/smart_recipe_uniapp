@@ -16,10 +16,10 @@
         <text class="menu-text">版本信息</text>
         <text class="menu-version">v1.0.0</text>
       </view>
-      <view class="menu-item" @click="onFeedback">
+      <!-- <view class="menu-item" @click="onFeedback">
         <text class="menu-text">意见反馈</text>
         <text class="menu-arrow">›</text>
-      </view>
+      </view> -->
     </view>
 
     <!-- 修改密码弹窗 -->

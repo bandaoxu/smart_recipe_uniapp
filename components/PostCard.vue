@@ -45,6 +45,10 @@
         <text class="iconfont icon-comment"></text>
         <text class="action-text">{{ formatLargeNumber(post.comments_count) }}</text>
       </view>
+      <!-- 作者操作按钮 -->
+      <view class="action-item owner-actions" v-if="isOwner" @click.stop="showOwnerActions">
+        <text class="more-dots">···</text>
+      </view>
     </view>
   </view>
 </template>
@@ -63,7 +67,7 @@
  */
 
 import { formatRelativeTime, formatLargeNumber } from '@/utils/format'
-import { likePost } from '@/api/community'
+import { likePost, deletePost } from '@/api/community'
 import { useUserStore } from '@/store'
 
 export default {
@@ -77,6 +81,12 @@ export default {
   data() {
     return {
       imageErrors: {}
+    }
+  },
+  computed: {
+    isOwner() {
+      const userStore = useUserStore()
+      return userStore.isLoggedIn && userStore.userId === this.post.user?.id
     }
   },
   methods: {
@@ -146,6 +156,37 @@ export default {
       } catch (error) {
         console.error('点赞失败:', error)
       }
+    },
+
+    /**
+     * 作者操作菜单（编辑/删除）
+     */
+    showOwnerActions() {
+      uni.showActionSheet({
+        itemList: ['编辑动态', '删除动态'],
+        success: ({ tapIndex }) => {
+          if (tapIndex === 0) {
+            uni.navigateTo({ url: `/pages/community/publish?post_id=${this.post.id}` })
+          } else {
+            uni.showModal({
+              title: '删除动态',
+              content: '确定删除这条动态吗？',
+              confirmColor: '#ff4d4f',
+              success: async (res) => {
+                if (res.confirm) {
+                  try {
+                    await deletePost(this.post.id)
+                    this.$emit('deleted', this.post.id)
+                    uni.showToast({ title: '已删除', icon: 'none' })
+                  } catch (error) {
+                    uni.showToast({ title: '删除失败', icon: 'none' })
+                  }
+                }
+              }
+            })
+          }
+        }
+      })
     }
   }
 }
@@ -261,5 +302,16 @@ export default {
 .action-text {
   font-size: 24rpx;
   color: #999999;
+}
+
+.owner-actions {
+  margin-left: auto;
+}
+
+.more-dots {
+  font-size: 32rpx;
+  color: #cccccc;
+  letter-spacing: 2rpx;
+  font-weight: bold;
 }
 </style>

@@ -376,8 +376,7 @@ export default {
     },
 
     forwardToFriend() {
-      // 触发微信小程序转发，需 onShareAppMessage 钩子已配置
-      uni.showShareMenu({ withShareTicket: true })
+      uni.showToast({ title: '请点击右上角菜单转发', icon: 'none', duration: 2000 })
     },
 
     doRevokeShare() {

@@ -9,6 +9,7 @@
  */
 
 import request from './request'
+import { getToken } from '@/utils/auth'
 
 /**
  * 获取食谱列表
@@ -157,7 +158,7 @@ export const getRecipeComments = (id) => {
   return request({
     url: `/community/posts/${id}/comments/`,
     method: 'GET',
-    needAuth: false
+    needAuth: !!getToken()
   })
 }
 
