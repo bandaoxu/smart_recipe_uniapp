@@ -346,9 +346,11 @@ export default {
       try {
         const res = await createShare(this.shareForm)
         const data = res.data
-        // 格式化过期时间
+        // 格式化过期时间（含小时和分钟）
         const expiresAt = new Date(data.expires_at)
-        const label = `${expiresAt.getMonth() + 1}月${expiresAt.getDate()}日`
+        const hours = String(expiresAt.getHours()).padStart(2, '0')
+        const minutes = String(expiresAt.getMinutes()).padStart(2, '0')
+        const label = `${expiresAt.getMonth() + 1}月${expiresAt.getDate()}日 ${hours}:${minutes}`
         this.shareResult = {
           token: data.token,
           permission: data.permission,

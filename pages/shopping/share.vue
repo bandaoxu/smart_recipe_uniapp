@@ -96,7 +96,12 @@ export default {
     expireLabel() {
       if (!this.meta.expires_at) return ''
       const d = new Date(this.meta.expires_at)
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hour = String(d.getHours()).padStart(2, '0')
+      const minute = String(d.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day} ${hour}:${minute}`
     },
     // 按"未购买/已购买"分两组
     itemGroups() {
