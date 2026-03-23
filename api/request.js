@@ -11,7 +11,8 @@
 import { getToken, getRefreshToken, setToken, clearToken } from '@/utils/auth'
 
 // API 基础地址
-const BASE_URL = 'http://127.0.0.1:8000/api'
+// const BASE_URL = 'http://127.0.0.1:8000/api'
+const BASE_URL = 'http://192.168.45.111:8000/api'
 
 // 是否正在刷新 Token
 let isRefreshing = false

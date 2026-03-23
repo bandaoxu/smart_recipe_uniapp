@@ -146,8 +146,9 @@
 import { recognizeIngredient, recommendByIngredients } from '@/api/ingredient'
 import { getToken } from '@/utils/auth'
 import { formatDifficulty, formatCookingTime } from '@/utils/format'
+import { BASE_URL } from '@/api/request'
 
-const BASE_URL = 'http://127.0.0.1:8000/api'
+// const BASE_URL = 'http://192.168.45.111:8000/api'
 
 export default {
   name: 'IngredientRecognize',
