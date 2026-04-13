@@ -59,6 +59,7 @@
  */
 
 import { formatDifficulty, formatCookingTime, formatLargeNumber } from '@/utils/format'
+import { getMediaUrl } from '@/utils/media'
 
 export default {
   name: 'RecipeCard',
@@ -86,9 +87,20 @@ export default {
       ]
     }
   },
-  created() {
-    this.coverSrc = this.recipe.cover_image || '/static/images/default-recipe.svg'
-    this.avatarSrc = this.recipe.author?.avatar || '/static/images/default-avatar.svg'
+  watch: {
+    recipe: {
+      handler(newRecipe) {
+        if (newRecipe && newRecipe.id) {
+          // 先设置为网络 URL（立即显示）
+          this.coverSrc = this.$media(newRecipe.cover_image, '/static/images/default-recipe.svg')
+          this.avatarSrc = this.$media(newRecipe.author?.avatar, '/static/images/default-avatar.svg')
+          
+          // 然后异步下载到本地（优化体验）
+          this.downloadImages()
+        }
+      },
+      immediate: true
+    }
   },
   methods: {
     formatDifficulty,
@@ -102,6 +114,50 @@ export default {
       uni.navigateTo({
         url: `/pages/recipe/detail?id=${this.recipe.id}`
       })
+    },
+
+    /**
+     * 下载图片到本地
+     */
+    async downloadImages() {
+      try {
+        // 下载封面图
+        if (this.recipe.cover_image) {
+          await this.downloadImage('cover', this.recipe.cover_image)
+        }
+        
+        // 下载头像
+        if (this.recipe.author?.avatar) {
+          await this.downloadImage('avatar', this.recipe.author.avatar)
+        }
+      } catch (error) {
+        console.error('[RecipeCard] 下载图片失败:', error)
+      }
+    },
+
+    /**
+     * 下载单个图片
+     */
+    async downloadImage(type, url) {
+      try {
+        const fullUrl = this.$media(url)
+        const res = await uni.downloadFile({
+          url: fullUrl,
+          timeout: 30000
+        })
+        
+        if (res.statusCode === 200 && res.tempFilePath) {
+          if (type === 'cover') {
+            this.coverSrc = res.tempFilePath
+            console.log('[RecipeCard] 封面图下载成功:', res.tempFilePath)
+          } else if (type === 'avatar') {
+            this.avatarSrc = res.tempFilePath
+            console.log('[RecipeCard] 头像下载成功:', res.tempFilePath)
+          }
+        }
+      } catch (error) {
+        console.error(`[RecipeCard] 下载失败 ${type}:`, error)
+      }
     }
   }
 }

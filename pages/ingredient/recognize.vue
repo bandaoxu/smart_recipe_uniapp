@@ -119,7 +119,7 @@
         >
           <image
             class="recipe-cover"
-            :src="recipe.cover_image || '/static/images/default-recipe.svg'"
+            :src="$media(recipe.cover_image, '/static/images/default-recipe.svg')"
             mode="aspectFill"
           />
           <view class="recipe-info">

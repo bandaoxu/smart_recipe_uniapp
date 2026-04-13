@@ -11,6 +11,7 @@
 import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+import { getMediaUrl } from '@/utils/media'
 
 export function createApp() {
   const app = createSSRApp(App)
@@ -18,6 +19,9 @@ export function createApp() {
   // 使用 Pinia 状态管理
   const pinia = createPinia()
   app.use(pinia)
+
+  // 全局图片 URL 转换工具，所有模板可用 $media(url, fallback)
+  app.config.globalProperties.$media = getMediaUrl
 
   return {
     app,

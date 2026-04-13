@@ -5,7 +5,7 @@
       <view class="form-item">
         <text class="label required">封面图</text>
         <view class="cover-upload" @click="chooseCoverImage">
-          <image v-if="formData.cover_image" :src="formData.cover_image" mode="aspectFill" class="cover-preview"></image>
+          <image v-if="formData.cover_image" :src="$media(formData.cover_image)" mode="aspectFill" class="cover-preview"></image>
           <view v-else class="upload-placeholder">
             <text class="upload-icon">📷</text>
             <text class="upload-text">点击上传封面图</text>
@@ -142,7 +142,7 @@
               :inputBorder="false"
             />
             <view class="step-image-upload" @click="chooseStepImage(index)">
-              <image v-if="step.image_url" :src="step.image_url" mode="aspectFill" class="step-image-preview"></image>
+              <image v-if="step.image_url" :src="$media(step.image_url)" mode="aspectFill" class="step-image-preview"></image>
               <view v-else class="step-upload-placeholder">
                 <text class="upload-icon">📷</text>
                 <text class="upload-text">添加步骤图片（可选）</text>
@@ -179,6 +179,7 @@
  */
 
 import { createRecipe } from '@/api/recipe'
+import { BASE_URL } from '@/api/request'
 import { getToken } from '@/utils/auth'
 
 export default {
@@ -278,7 +279,7 @@ export default {
       uni.showLoading({ title: '上传中...' })
 
       uni.uploadFile({
-        url: 'http://127.0.0.1:8000/api/upload/',
+        url: BASE_URL + '/upload/',
         filePath: filePath,
         name: 'file',
         header: {

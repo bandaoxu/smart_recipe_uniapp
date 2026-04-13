@@ -5,7 +5,7 @@
       <view class="post-content">
         <!-- 作者信息 -->
         <view class="author-info">
-          <image :src="post.user?.avatar || post.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" class="author-avatar"
+          <image :src="localAvatarPath || $media(post.user?.avatar || post.author?.avatar, '/static/images/default-avatar.svg')" mode="aspectFill" class="author-avatar"
             @click="goToUserProfile(post.user?.id)"></image>
           <view class="author-detail">
             <text class="author-name">{{ post.user?.nickname || post.author?.nickname }}</text>
@@ -31,7 +31,7 @@
           <image
             v-for="(image, index) in post.images"
             :key="index"
-            :src="image"
+            :src="localImagePaths[index] || $media(image)"
             mode="aspectFill"
             class="post-image"
             @click="previewImage(index)"
@@ -40,7 +40,7 @@
 
         <!-- 关联食谱 -->
         <view class="related-recipe" v-if="post.recipe" @click="goToRecipe(post.recipe.id)">
-          <image :src="post.recipe.cover_image" mode="aspectFill" class="recipe-cover"></image>
+          <image :src="localRecipeCoverPath || $media(post.recipe.cover_image)" mode="aspectFill" class="recipe-cover"></image>
           <view class="recipe-info">
             <text class="recipe-name">{{ post.recipe.name }}</text>
             <text class="recipe-author">by {{ post.recipe.author?.nickname }}</text>
@@ -148,7 +148,11 @@ export default {
       commentContent: '',
       submitting: false,
       replyingTo: null,
-      isOwnPost: false
+      isOwnPost: false,
+      // 本地图片路径
+      localAvatarPath: '',
+      localImagePaths: {},
+      localRecipeCoverPath: ''
     }
   },
   computed: {
@@ -157,6 +161,30 @@ export default {
     },
     currentUserId() {
       return useUserStore().userId
+    }
+  },
+  watch: {
+    post: {
+      handler(newPost) {
+        if (newPost && newPost.id) {
+          // 先设置为网络 URL（立即显示）
+          const avatarUrl = newPost.user?.avatar || newPost.author?.avatar
+          if (avatarUrl) {
+            this.localAvatarPath = this.$media(avatarUrl, '/static/images/default-avatar.svg')
+          }
+          if (newPost.images && newPost.images.length > 0) {
+            for (let i = 0; i < newPost.images.length; i++) {
+              this.$set(this.localImagePaths, i, this.$media(newPost.images[i]))
+            }
+          }
+          if (newPost.recipe?.cover_image) {
+            this.localRecipeCoverPath = this.$media(newPost.recipe.cover_image)
+          }
+          // 然后异步下载到本地（优化体验）
+          this.downloadImages()
+        }
+      },
+      immediate: true
     }
   },
   onLoad(options) {
@@ -215,7 +243,7 @@ export default {
         // 加载动态详情
         const postRes = await getPostDetail(this.postId)
         this.post = postRes.data
-
+        
         // 初始化关注状态（后端返回 author.is_following）
         const userStore = useUserStore()
         const authorId = this.post.user?.id || this.post.author?.id
@@ -225,6 +253,9 @@ export default {
         // 加载评论列表
         const commentsRes = await getComments(this.postId)
         this.comments = commentsRes.data || []
+        
+        // 下载图片到本地（解决真机调试图片不显示问题）
+        await this.downloadImages()
 
       } catch (error) {
         console.error('加载失败:', error)
@@ -234,6 +265,62 @@ export default {
         })
       } finally {
         this.loading = false
+      }
+    },
+
+    /**
+     * 下载图片到本地
+     */
+    async downloadImages() {
+      try {
+        // 下载头像
+        const avatarUrl = this.post.user?.avatar || this.post.author?.avatar
+        if (avatarUrl) {
+          await this.downloadImage('avatar', avatarUrl)
+        }
+        
+        // 下载动态图片
+        if (this.post.images && this.post.images.length > 0) {
+          for (let i = 0; i < this.post.images.length; i++) {
+            await this.downloadImage(`image_${i}`, this.post.images[i])
+          }
+        }
+        
+        // 下载关联食谱封面
+        if (this.post.recipe?.cover_image) {
+          await this.downloadImage('recipe_cover', this.post.recipe.cover_image)
+        }
+      } catch (error) {
+        console.error('[社区详情] 下载图片失败:', error)
+      }
+    },
+
+    /**
+     * 下载单个图片
+     */
+    async downloadImage(type, url) {
+      try {
+        const fullUrl = this.$media(url)
+        const res = await uni.downloadFile({
+          url: fullUrl,
+          timeout: 30000
+        })
+        
+        if (res.statusCode === 200 && res.tempFilePath) {
+          if (type === 'avatar') {
+            this.localAvatarPath = res.tempFilePath
+            console.log('[社区详情] 头像下载成功:', res.tempFilePath)
+          } else if (type.startsWith('image_')) {
+            const index = parseInt(type.replace('image_', ''))
+            this.$set(this.localImagePaths, index, res.tempFilePath)
+            console.log(`[社区详情] 图片${index}下载成功:`, res.tempFilePath)
+          } else if (type === 'recipe_cover') {
+            this.localRecipeCoverPath = res.tempFilePath
+            console.log('[社区详情] 食谱封面下载成功:', res.tempFilePath)
+          }
+        }
+      } catch (error) {
+        console.error(`[社区详情] 下载失败 ${type}:`, error)
       }
     },
 
@@ -249,7 +336,7 @@ export default {
      */
     previewImage(index) {
       uni.previewImage({
-        urls: this.post.images,
+        urls: this.post.images.map(url => this.$media(url)),
         current: index
       })
     },

@@ -2,7 +2,7 @@
   <view class="post-card" @click="goToDetail">
     <!-- 用户信息 -->
     <view class="post-header">
-      <image class="avatar" :src="post.user?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"
+      <image class="avatar" :src="localAvatarPath || $media(post.user?.avatar, '/static/images/default-avatar.svg')" mode="aspectFill"
         @click.stop="goToUserProfile(post.user?.id)"></image>
       <view class="user-info" @click.stop="goToUserProfile(post.user?.id)">
         <text class="username">{{ post.user?.nickname || '匿名' }}</text>
@@ -21,10 +21,9 @@
         v-for="(image, index) in post.images"
         :key="index"
         class="post-image"
-        :class="{ 'single-image': post.images.length === 1 }"
-        :src="imageErrors[index] ? '/static/images/default-recipe.svg' : image"
+        :class="{ 'single-image': post.images.length ===1 }"
+        :src="localImagePaths[index] || $media(image)"
         mode="aspectFill"
-        @error="onImageError(index)"
         @click.stop="previewImage(index)"
       ></image>
     </view>
@@ -80,13 +79,36 @@ export default {
   },
   data() {
     return {
-      imageErrors: {}
+      imageErrors: {},
+      // 本地图片路径
+      localAvatarPath: '',
+      localImagePaths: {}
     }
   },
   computed: {
     isOwner() {
       const userStore = useUserStore()
       return userStore.isLoggedIn && userStore.userId === this.post.user?.id
+    }
+  },
+  watch: {
+    post: {
+      handler(newPost) {
+        if (newPost && newPost.id) {
+          // 先设置为网络 URL（立即显示）
+          if (newPost.user?.avatar) {
+            this.localAvatarPath = this.$media(newPost.user.avatar, '/static/images/default-avatar.svg')
+          }
+          if (newPost.images && newPost.images.length > 0) {
+            for (let i = 0; i < newPost.images.length; i++) {
+              this.$set(this.localImagePaths, i, this.$media(newPost.images[i]))
+            }
+          }
+          // 然后异步下载到本地（优化体验）
+          this.downloadImages()
+        }
+      },
+      immediate: true
     }
   },
   methods: {
@@ -134,11 +156,58 @@ export default {
     },
 
     /**
+     * 下载图片到本地
+     */
+    async downloadImages() {
+      try {
+        // 下载头像
+        if (this.post.user?.avatar) {
+          await this.downloadImage('avatar', this.post.user.avatar)
+        }
+        
+        // 下载动态图片
+        if (this.post.images && this.post.images.length > 0) {
+          for (let i = 0; i < this.post.images.length; i++) {
+            await this.downloadImage(`image_${i}`, this.post.images[i])
+          }
+        }
+      } catch (error) {
+        console.error('[PostCard] 下载图片失败:', error)
+      }
+    },
+
+    /**
+     * 下载单个图片
+     */
+    async downloadImage(type, url) {
+      try {
+        const fullUrl = this.$media(url)
+        const res = await uni.downloadFile({
+          url: fullUrl,
+          timeout: 30000
+        })
+        
+        if (res.statusCode === 200 && res.tempFilePath) {
+          if (type === 'avatar') {
+            this.localAvatarPath = res.tempFilePath
+            console.log('[PostCard] 头像下载成功:', res.tempFilePath)
+          } else if (type.startsWith('image_')) {
+            const index = parseInt(type.replace('image_', ''))
+            this.$set(this.localImagePaths, index, res.tempFilePath)
+            console.log(`[PostCard] 图片${index}下载成功:`, res.tempFilePath)
+          }
+        }
+      } catch (error) {
+        console.error(`[PostCard] 下载失败 ${type}:`, error)
+      }
+    },
+
+    /**
      * 预览图片
      */
     previewImage(index) {
       uni.previewImage({
-        urls: this.post.images,
+        urls: this.post.images.map(url => this.$media(url)),
         current: index
       })
     },

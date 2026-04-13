@@ -8,7 +8,7 @@
     <view v-else>
       <!-- 个人信息头部 -->
       <view class="profile-header">
-        <image class="avatar" :src="userInfo.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" />
+        <image class="avatar" :src="$media(userInfo.avatar, '/static/images/default-avatar.svg')" mode="aspectFill" />
         <text class="nickname">{{ userInfo.nickname }}</text>
         <text class="username">@{{ userInfo.username }}</text>
 
@@ -52,7 +52,7 @@
             :key="recipe.id"
             @click="goToRecipe(recipe.id)"
           >
-            <image class="recipe-cover" :src="recipe.cover_image || '/static/images/default-recipe.svg'" mode="aspectFill" />
+            <image class="recipe-cover" :src="$media(recipe.cover_image, '/static/images/default-recipe.svg')" mode="aspectFill" />
             <view class="recipe-info">
               <text class="recipe-name">{{ recipe.name }}</text>
               <view class="recipe-meta">
@@ -86,7 +86,7 @@
               <image
                 v-for="(img, i) in p.images.slice(0, 3)"
                 :key="i"
-                :src="img"
+                :src="$media(img)"
                 mode="aspectFill"
                 class="post-img"
               />

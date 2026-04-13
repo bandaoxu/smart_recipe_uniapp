@@ -28,7 +28,7 @@
           >
             <image
               class="hot-cover"
-              :src="r.cover_image || '/static/images/default-recipe.svg'"
+              :src="localHotCoverPaths[r.id] || $media(r.cover_image, '/static/images/default-recipe.svg')"
               mode="aspectFill"
             />
             <view class="hot-info">
@@ -163,6 +163,8 @@ export default {
       loading: false,
       page: 1,
       hasMore: true,
+      // 本地图片路径（热门推荐）
+      localHotCoverPaths: {},
 
       showAdvancedFilter: false,
 
@@ -215,6 +217,16 @@ export default {
       return n
     }
   },
+  watch: {
+    hotRecipes: {
+      handler(newRecipes) {
+        if (newRecipes && newRecipes.length > 0) {
+          this.downloadHotImages()
+        }
+      },
+      immediate: true
+    }
+  },
   onLoad() {
     this.loadHotRecipes()
     this.loadData()
@@ -239,6 +251,42 @@ export default {
         this.hotRecipes = Array.isArray(res.data) ? res.data : (res.data.results || [])
       } catch (error) {
         console.error('热门食谱加载失败:', error)
+      }
+    },
+
+    /**
+     * 下载热门推荐图片到本地
+     */
+    async downloadHotImages() {
+      try {
+        for (let i = 0; i < this.hotRecipes.length; i++) {
+          const recipe = this.hotRecipes[i]
+          if (recipe.cover_image) {
+            await this.downloadHotImage(recipe.id, recipe.cover_image)
+          }
+        }
+      } catch (error) {
+        console.error('[首页] 下载热门图片失败:', error)
+      }
+    },
+
+    /**
+     * 下载单个热门图片
+     */
+    async downloadHotImage(recipeId, url) {
+      try {
+        const fullUrl = this.$media(url)
+        const res = await uni.downloadFile({
+          url: fullUrl,
+          timeout: 30000
+        })
+        
+        if (res.statusCode === 200 && res.tempFilePath) {
+          this.$set(this.localHotCoverPaths, recipeId, res.tempFilePath)
+          console.log(`[首页] 热门${recipeId}封面下载成功:`, res.tempFilePath)
+        }
+      } catch (error) {
+        console.error(`[首页] 下载热门${recipeId}封面失败:`, error)
       }
     },
 

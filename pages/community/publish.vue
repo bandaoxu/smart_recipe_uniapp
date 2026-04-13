@@ -44,7 +44,7 @@
         <text class="label">关联食谱（可选）</text>
         <view class="recipe-selector" @click="selectRecipe">
           <view v-if="selectedRecipe" class="selected-recipe">
-            <image :src="selectedRecipe.cover_image" mode="aspectFill" class="recipe-cover"></image>
+            <image :src="$media(selectedRecipe.cover_image)" mode="aspectFill" class="recipe-cover"></image>
             <view class="recipe-info">
               <text class="recipe-name">{{ selectedRecipe.name }}</text>
               <text class="recipe-author">by {{ selectedRecipe.author?.nickname }}</text>
@@ -80,6 +80,7 @@
 import { createPost, updatePost, getPostDetail } from '@/api/community'
 import { getMyRecipes } from '@/api/recipe'
 import { getToken } from '@/utils/auth'
+import { BASE_URL } from '@/api/request'
 
 export default {
   name: 'PublishPost',
@@ -147,7 +148,7 @@ export default {
       uni.showLoading({ title: '上传中...' })
 
       uni.uploadFile({
-        url: 'http://127.0.0.1:8000/api/upload/',
+        url: BASE_URL + '/upload/',
         filePath: filePath,
         name: 'file',
         header: {

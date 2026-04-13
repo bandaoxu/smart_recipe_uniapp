@@ -12,7 +12,7 @@
         <view class="card-header">
           <image
             class="record-img"
-            :src="imgErrors[record.id] ? '/static/images/default-recipe.svg' : (record.image_url || '/static/images/default-recipe.svg')"
+            :src="imgErrors[record.id] ? '/static/images/default-recipe.svg' : $media(record.image_url, '/static/images/default-recipe.svg')"
             mode="aspectFill"
             @error="handleImgError(record.id)"
           />

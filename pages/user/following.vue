@@ -16,7 +16,7 @@
     <view class="user-list" v-else>
       <view class="user-item" v-for="user in list" :key="user.id">
         <view class="user-main" @click="goToProfile(user.id)">
-          <image class="avatar" :src="user.avatar || '/static/images/default-avatar.svg'" mode="aspectFill" />
+          <image class="avatar" :src="$media(user.avatar, '/static/images/default-avatar.svg')" mode="aspectFill" />
           <view class="user-info">
             <text class="nickname">{{ user.nickname }}</text>
             <text class="username">@{{ user.username }}</text>

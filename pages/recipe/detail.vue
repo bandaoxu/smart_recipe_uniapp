@@ -1,7 +1,11 @@
 <template>
   <view class="detail-container">
     <!-- 封面图 -->
-    <image class="cover-image" :src="recipe.cover_image" mode="aspectFill"></image>
+    <image 
+      class="cover-image" 
+      :src="getCoverImageSrc()"
+      mode="aspectFill"
+    ></image>
 
     <!-- 基本信息 -->
     <view class="info-section">
@@ -23,8 +27,12 @@
       </view>
 
       <view class="author-info">
-        <image class="avatar" :src="recipe.author?.avatar || '/static/images/default-avatar.svg'" mode="aspectFill"
-          @click="goToUserProfile(recipe.author?.id)"></image>
+        <image 
+          class="avatar" 
+          :src="localAvatarPath || $media(recipe.author?.avatar, '/static/images/default-avatar.svg')"
+          mode="aspectFill"
+          @click="goToUserProfile(recipe.author?.id)"
+        ></image>
         <text class="author-name">{{ recipe.author?.nickname || '匿名' }}</text>
       </view>
 
@@ -55,7 +63,12 @@
           <view class="step-number">{{ step.step_number }}</view>
           <view class="step-content">
             <text class="step-description">{{ step.description }}</text>
-            <image v-if="step.image_url" class="step-image" :src="step.image_url" mode="aspectFill"></image>
+            <image 
+              v-if="step.image_url" 
+              class="step-image" 
+              :src="localStepImages[step.id] || $media(step.image_url)"
+              mode="aspectFill"
+            ></image>
             <text v-if="step.tips" class="step-tips">💡 {{ step.tips }}</text>
           </view>
         </view>
@@ -163,7 +176,11 @@ export default {
       commentText: '',
       showModal: false,
       submitting: false,
-      replyingTo: null
+      replyingTo: null,
+      // 本地图片路径（用于真机调试）
+      localCoverPath: '',
+      localAvatarPath: '',
+      localStepImages: {}
     }
   },
   computed: {
@@ -216,6 +233,16 @@ export default {
         ])
         this.recipe = recipeRes.data || {}
         this.comments = commentsRes.data || []
+        
+        // 调试：打印封面图信息
+        console.log('[食谱数据] 封面图:', {
+          cover_image: this.recipe.cover_image,
+          hasCover: !!this.recipe.cover_image,
+          recipeName: this.recipe.name
+        })
+        
+        // 下载图片到本地（解决真机调试图片不显示问题）
+        await this.downloadImages()
       } catch (error) {
         console.error('加载失败:', error)
         uni.showToast({
@@ -223,6 +250,91 @@ export default {
           icon: 'none'
         })
       }
+    },
+
+    /**
+     * 下载图片到本地
+     */
+    async downloadImages() {
+      try {
+        // 下载封面图
+        if (this.recipe.cover_image) {
+          await this.downloadImage('cover', this.recipe.cover_image)
+        }
+        
+        // 下载头像
+        if (this.recipe.author?.avatar) {
+          await this.downloadImage('avatar', this.recipe.author.avatar)
+        }
+        
+        // 下载步骤图片
+        if (this.recipe.steps && this.recipe.steps.length > 0) {
+          for (const step of this.recipe.steps) {
+            if (step.image_url) {
+              await this.downloadImage(`step_${step.id}`, step.image_url)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('下载图片失败:', error)
+        // 下载失败不影响页面显示，使用原始 URL
+      }
+    },
+
+    /**
+     * 下载单个图片
+     */
+    async downloadImage(type, url) {
+      try {
+        const fullUrl = this.$media(url)
+        console.log(`[开始下载图片] ${type}:`, {
+          originalUrl: url,
+          fullUrl: fullUrl
+        })
+        
+        const res = await uni.downloadFile({
+          url: fullUrl,
+          timeout: 30000
+        })
+        
+        console.log(`[下载响应] ${type}:`, {
+          statusCode: res.statusCode,
+          tempFilePath: res.tempFilePath,
+          errMsg: res.errMsg
+        })
+        
+        if (res.statusCode === 200 && res.tempFilePath) {
+          if (type === 'cover') {
+            this.localCoverPath = res.tempFilePath
+            console.log(`[封面图设置成功] localCoverPath:`, this.localCoverPath)
+          } else if (type === 'avatar') {
+            this.localAvatarPath = res.tempFilePath
+          } else if (type.startsWith('step_')) {
+            const stepId = type.replace('step_', '')
+            this.$set(this.localStepImages, stepId, res.tempFilePath)
+          }
+          console.log(`[图片下载成功] ${type}:`, res.tempFilePath)
+        } else {
+          console.error(`[图片下载失败] ${type}: 状态码不是200`, res)
+        }
+      } catch (error) {
+        console.error(`[图片下载失败] ${type}:`, error)
+      }
+    },
+
+    /**
+     * 获取封面图源（智能选择本地或网络路径）
+     */
+    getCoverImageSrc() {
+      // 如果本地路径存在且有效，使用本地路径
+      if (this.localCoverPath && this.localCoverPath.startsWith('wxfile://')) {
+        console.log('[封面图] 使用本地路径:', this.localCoverPath)
+        return this.localCoverPath
+      }
+      // 否则使用网络路径
+      const networkUrl = this.$media(this.recipe.cover_image)
+      console.log('[封面图] 使用网络路径:', networkUrl)
+      return networkUrl
     },
 
     /**

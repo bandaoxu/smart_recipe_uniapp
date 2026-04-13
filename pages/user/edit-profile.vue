@@ -4,7 +4,7 @@
     <view class="avatar-section" @click="chooseAvatar">
       <image
         class="profile-avatar"
-        :src="form.avatar || '/static/images/default-avatar.svg'"
+        :src="$media(form.avatar, '/static/images/default-avatar.svg')"
         mode="aspectFill"
       />
       <view class="avatar-tip">
@@ -128,6 +128,7 @@
 import { useUserStore } from '@/store'
 import { getProfile, patchProfile, updateHealthProfile } from '@/api/user'
 import { getToken } from '@/utils/auth'
+import { BASE_URL } from '@/api/request'
 
 export default {
   name: 'EditProfile',
@@ -222,7 +223,7 @@ export default {
     uploadAvatar(filePath) {
       uni.showLoading({ title: '上传中...' })
       uni.uploadFile({
-        url: 'http://127.0.0.1:8000/api/upload/',
+        url: BASE_URL + '/upload/',
         filePath,
         name: 'file',
         header: { 'Authorization': `Bearer ${getToken()}` },
